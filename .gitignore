@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+jspm_packages/
+web_modules/
+
+# Next.js Build Output
+.next/
+out/
+
+# Vite / Build Outputs
+dist/
+build/
+tmp/
+*.log
+
+# Environment Secrets (Crucial to prevent committing local keys to GitHub)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.env
+
+# IDEs & System Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.gemini/
+.system_generated/

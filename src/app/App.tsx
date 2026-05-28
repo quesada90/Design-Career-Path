@@ -1,6 +1,9 @@
+'use client';
+
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User } from 'lucide-react';
+import { User, Share2, Loader2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { CareerNode } from './components/career-node';
 import { ConnectionLine } from './components/connection-line';
 import { RoleModal } from './components/role-modal';
@@ -8,12 +11,17 @@ import { SidebarLabels } from './components/sidebar-labels';
 import { ConfirmationModal } from './components/confirmation-modal';
 import { ArchetypeSelectorModal, type DesignArchetype, type OnboardingResult } from './components/archetype-selector-modal';
 import { SkillTreeNavigation } from './components/skill-tree-navigation';
-import { SkillForceGraph } from './components/skill-force-graph';
 import { SkillModal } from './components/skill-modal';
 import { QuestLog } from './components/quest-log';
 import { QuestCelebrationModal } from './components/quest-celebration-modal';
+import { ShareModal } from './components/share-modal';
 import { careerRoles, type CareerRole } from './components/career-data';
 import { getRoleState, canSetAsTarget, getAvailableTargets } from './utils/career-path-logic';
+
+const SkillForceGraph = dynamic(
+  () => import('./components/skill-force-graph').then((mod) => mod.SkillForceGraph),
+  { ssr: false }
+);
 import {
   getSkillsForArchetype,
   getAllSkillsForArchetype,
@@ -24,6 +32,17 @@ import {
 import type { QuestTargets, QuestTarget, QuestTask } from './types/quest-log';
 import { createNewTask, generateTaskId } from './types/quest-log';
 import type { TimeAllocation } from './data/time-allocation-data';
+import {
+  fetchProfile,
+  updateProfile,
+  fetchSkillProficiencies,
+  saveSkillProficiency,
+  fetchTargetSkills,
+  toggleTargetSkill,
+  fetchQuestTasks,
+  saveQuestTask,
+  deleteQuestTask,
+} from './actions';
 
 const SKILL_CATEGORY_COUNT = 4;
 
@@ -40,6 +59,112 @@ export default function App() {
   // Skill Tree Navigation State
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
 
+  // Loading & Modal States
+  const [loading, setLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showArchetypeModal, setShowArchetypeModal] = useState(false);
+
+  // Core career path collaborative states
+  const [designArchetype, setDesignArchetype] = useState<DesignArchetype | null>(null);
+  const [excludedSkillIds, setExcludedSkillIds] = useState<string[]>([]);
+  const [customTimeAllocations, setCustomTimeAllocations] = useState<Record<string, TimeAllocation>>({});
+  const [currentRoleId, setCurrentRoleId] = useState<string | null>(null);
+  const [targetRoleIds, setTargetRoleIds] = useState<string[]>([]);
+  const [skillProficiencies, setSkillProficiencies] = useState<Record<string, SkillProficiency>>({});
+  const [targetSkillIds, setTargetSkillIds] = useState<string[]>([]);
+  const [questTargets, setQuestTargets] = useState<QuestTargets>({});
+
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
+
+  // Celebration modal state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationTarget, setCelebrationTarget] = useState<{ id: string; name: string; type: 'role' | 'skill' } | null>(null);
+
+  // Confirmation modal state
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [pendingCurrentRole, setPendingCurrentRole] = useState<string | null>(null);
+
+  // Fetch all collaborative Supabase database states on mount
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        
+        // 1. Fetch Profile
+        const profile = await fetchProfile();
+        if (profile) {
+          setDesignArchetype(profile.archetype);
+          setExcludedSkillIds(profile.excluded_skill_ids || []);
+          setCustomTimeAllocations(profile.custom_time_allocations || {});
+          setCurrentRoleId(profile.current_role_id || null);
+          setTargetRoleIds(profile.target_role_ids || []);
+
+          // Show archetype selector on first load if no archetype is set
+          if (!profile.archetype) {
+            setShowArchetypeModal(true);
+          }
+        } else {
+          setShowArchetypeModal(true);
+        }
+
+        // 2. Fetch Skill Proficiencies
+        const proficiencies = await fetchSkillProficiencies();
+        setSkillProficiencies(proficiencies);
+
+        // 3. Fetch Target Skills
+        const targets = await fetchTargetSkills();
+        setTargetSkillIds(targets);
+
+        // 4. Fetch Quest Tasks
+        const dbTasks = await fetchQuestTasks();
+        
+        // Map database tasks back to questTargets structure
+        const mappedTargets: QuestTargets = {};
+        dbTasks.forEach((t: any) => {
+          const targetId = t.target_id;
+          if (!mappedTargets[targetId]) {
+            let targetName = '';
+            if (t.target_type === 'role') {
+              const role = careerRoles.find(r => r.id === targetId);
+              targetName = role ? role.title : 'Role';
+            } else {
+              const arch = profile?.archetype;
+              if (arch) {
+                const skills = getSkillsForArchetype(arch);
+                const allSkills = [...skills.craft, ...skills.communication, ...skills.leadership, ...skills.business];
+                const skillObj = allSkills.find(s => s.id === targetId);
+                targetName = skillObj ? skillObj.name : 'Skill';
+              } else {
+                targetName = 'Skill';
+              }
+            }
+            mappedTargets[targetId] = {
+              id: targetId,
+              type: t.target_type,
+              name: targetName,
+              tasks: []
+            };
+          }
+          mappedTargets[targetId].tasks.push({
+            id: t.id,
+            name: t.name,
+            measurableType: t.measurable_type as any,
+            measurableValue: t.measurable_value,
+            deadline: t.deadline,
+            completed: t.completed
+          });
+        });
+        
+        setQuestTargets(mappedTargets);
+      } catch (err) {
+        console.error('Failed to load data from Supabase:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
   // Reset active category index if it's out of bounds
   useEffect(() => {
     if (activeCategoryIndex >= SKILL_CATEGORY_COUNT) {
@@ -47,153 +172,127 @@ export default function App() {
     }
   }, [activeCategoryIndex]);
 
-  // Archetype state with localStorage persistence
-  const [designArchetype, setDesignArchetype] = useState<DesignArchetype | null>(() => {
-    const saved = localStorage.getItem('designArchetype');
-    return saved as DesignArchetype | null;
-  });
+  const handleOnboardingComplete = async (result: OnboardingResult) => {
+    try {
+      setLoading(true);
+      const newArchetypeSkills = getAllSkillsForArchetype(result.archetype);
+      const validSkillIds = new Set(newArchetypeSkills.map((s) => s.id));
 
-  const [excludedSkillIds, setExcludedSkillIds] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('excludedSkillIds') || '[]'); } catch { return []; }
-  });
+      // Remove excluded IDs that no longer exist in the new archetype
+      const updatedExcludedSkills = result.excludedSkillIds.filter((id) => validSkillIds.has(id));
+      setExcludedSkillIds(updatedExcludedSkills);
 
-  const [customTimeAllocations, setCustomTimeAllocations] = useState<Record<string, TimeAllocation>>(() => {
-    try { return JSON.parse(localStorage.getItem('customTimeAllocations') || '{}'); } catch { return {}; }
-  });
-
-  const [showArchetypeModal, setShowArchetypeModal] = useState(false);
-
-  // Show archetype selector on first load
-  useEffect(() => {
-    if (!designArchetype) {
-      setShowArchetypeModal(true);
-    }
-  }, [designArchetype]);
-
-  // Persist archetype to localStorage
-  useEffect(() => {
-    if (designArchetype) {
-      localStorage.setItem('designArchetype', designArchetype);
-    }
-  }, [designArchetype]);
-
-  useEffect(() => {
-    localStorage.setItem('excludedSkillIds', JSON.stringify(excludedSkillIds));
-  }, [excludedSkillIds]);
-
-  useEffect(() => {
-    localStorage.setItem('customTimeAllocations', JSON.stringify(customTimeAllocations));
-  }, [customTimeAllocations]);
-
-  const handleOnboardingComplete = (result: OnboardingResult) => {
-    const newArchetypeSkills = getAllSkillsForArchetype(result.archetype);
-    const validSkillIds = new Set(newArchetypeSkills.map((s) => s.id));
-
-    // Remove excluded IDs that no longer exist in the new archetype
-    setExcludedSkillIds(result.excludedSkillIds.filter((id) => validSkillIds.has(id)));
-
-    // Prune proficiencies: keep skills that exist in the new archetype (shared + craft)
-    setSkillProficiencies((prev) => {
-      const pruned: Record<string, SkillProficiency> = {};
-      for (const [id, prof] of Object.entries(prev)) {
-        if (validSkillIds.has(id)) pruned[id] = prof;
+      // Prune proficiencies: keep skills that exist in the new archetype (shared + craft)
+      const newProficiencies: Record<string, SkillProficiency> = {};
+      const promises: Promise<any>[] = [];
+      
+      for (const [id, prof] of Object.entries(skillProficiencies)) {
+        if (validSkillIds.has(id)) {
+          newProficiencies[id] = prof;
+        } else {
+          // Delete from database
+          promises.push(saveSkillProficiency(id, 'locked'));
+        }
       }
-      return pruned;
-    });
+      setSkillProficiencies(newProficiencies);
 
-    // Prune target skill IDs that no longer exist
-    setTargetSkillIds((prev) => prev.filter((id) => validSkillIds.has(id)));
+      // Prune target skill IDs that no longer exist
+      const updatedTargetSkills = targetSkillIds.filter((id) => validSkillIds.has(id));
+      for (const id of targetSkillIds) {
+        if (!validSkillIds.has(id)) {
+          promises.push(toggleTargetSkill(id)); // removes from targets
+        }
+      }
+      setTargetSkillIds(updatedTargetSkills);
 
-    setDesignArchetype(result.archetype);
-    setCustomTimeAllocations(result.customTimeAllocations);
-    if (result.currentRoleId) {
-      setCurrentRoleId(result.currentRoleId);
+      setDesignArchetype(result.archetype);
+      setCustomTimeAllocations(result.customTimeAllocations);
+      if (result.currentRoleId) {
+        setCurrentRoleId(result.currentRoleId);
+      }
+
+      // Save onboarding choices to database
+      await updateProfile({
+        archetype: result.archetype,
+        current_role_id: result.currentRoleId || null,
+        target_role_ids: [],
+        custom_time_allocations: result.customTimeAllocations as any,
+        excluded_skill_ids: updatedExcludedSkills
+      });
+
+      await Promise.all(promises);
+
+      setActiveCategoryIndex(0);
+      setShowArchetypeModal(false);
+    } catch (err) {
+      console.error('Failed to update onboarding choices:', err);
+    } finally {
+      setLoading(false);
     }
-    setActiveCategoryIndex(0);
-    setShowArchetypeModal(false);
   };
 
-  // Career path state with localStorage persistence (MOVED UP - needs to be declared before use)
-  const [currentRoleId, setCurrentRoleId] = useState<string | null>(() => {
-    const saved = localStorage.getItem('currentRoleId');
-    return saved || null;
-  });
-  
-  const [targetRoleIds, setTargetRoleIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('targetRoleIds');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Skill Tree state with localStorage persistence
-  const [skillProficiencies, setSkillProficiencies] = useState<Record<string, SkillProficiency>>(() => {
-    const saved = localStorage.getItem('skillProficiencies');
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
-
-  // Target skills state with localStorage persistence
-  const [targetSkillIds, setTargetSkillIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('targetSkillIds');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Persist skill proficiencies to localStorage
-  useEffect(() => {
-    localStorage.setItem('skillProficiencies', JSON.stringify(skillProficiencies));
-  }, [skillProficiencies]);
-
-  // Persist target skills to localStorage
-  useEffect(() => {
-    localStorage.setItem('targetSkillIds', JSON.stringify(targetSkillIds));
-  }, [targetSkillIds]);
-
-  // Quest Log state with localStorage persistence
-  const [questTargets, setQuestTargets] = useState<QuestTargets>(() => {
-    const saved = localStorage.getItem('questTargets');
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  // Celebration modal state
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [celebrationTarget, setCelebrationTarget] = useState<{ id: string; name: string; type: 'role' | 'skill' } | null>(null);
-
-  // Persist quest targets to localStorage
-  useEffect(() => {
-    localStorage.setItem('questTargets', JSON.stringify(questTargets));
-  }, [questTargets]);
-
   // Handle skill proficiency change
-  const handleProficiencyChange = (skillId: string, proficiency: SkillProficiency) => {
+  const handleProficiencyChange = async (skillId: string, proficiency: SkillProficiency) => {
+    // Optimistic UI updates
     setSkillProficiencies((prev) => ({
       ...prev,
       [skillId]: proficiency,
     }));
     
-    // Automatically remove from targets when proficiency is set
     if (proficiency !== 'locked') {
       setTargetSkillIds((prev) => prev.filter((id) => id !== skillId));
     }
+
+    // Save in database
+    await saveSkillProficiency(skillId, proficiency);
   };
 
   // Handle target skill toggle
-  const handleToggleTarget = (skillId: string) => {
+  const handleToggleTarget = async (skillId: string) => {
+    const isRemoving = targetSkillIds.includes(skillId);
+    
     setTargetSkillIds((prev) => {
-      const isRemoving = prev.includes(skillId);
-
-      // Remove from quest targets if removing
       if (isRemoving) {
-        setQuestTargets((questPrev) => {
-          const newTargets = { ...questPrev };
-          delete newTargets[skillId];
-          return newTargets;
-        });
         return prev.filter((id) => id !== skillId);
       } else {
-        // Add to targets
         return [...prev, skillId];
       }
     });
+
+    if (isRemoving) {
+      const targetQuest = questTargets[skillId];
+      setQuestTargets((questPrev) => {
+        const newTargets = { ...questPrev };
+        delete newTargets[skillId];
+        return newTargets;
+      });
+      if (targetQuest) {
+        await Promise.all(targetQuest.tasks.map(t => deleteQuestTask(t.id)));
+      }
+    } else {
+      // Generate default tasks for target skill in database
+      if (designArchetype) {
+        const skills = getSkillsForArchetype(designArchetype);
+        const allSkills = [...skills.craft, ...skills.communication, ...skills.leadership, ...skills.business];
+        const skill = allSkills.find((s) => s.id === skillId);
+        if (skill) {
+          const newTasks = createExampleTasks(skillId, 'skill', skill.name);
+          setQuestTargets((prev) => ({
+            ...prev,
+            [skillId]: {
+              id: skillId,
+              type: 'skill',
+              name: skill.name,
+              tasks: newTasks
+            }
+          }));
+          await Promise.all(newTasks.map(t => saveQuestTask(t, skillId, 'skill')));
+        }
+      }
+    }
+
+    // Database toggle
+    await toggleTargetSkill(skillId);
   };
 
   // Get current role level for skill unlocking
@@ -202,23 +301,6 @@ export default function App() {
   // Get current role color for skill tree
   const currentRole = careerRoles.find((r) => r.id === currentRoleId);
   const roleColor = currentRole?.color || '#06b6d4'; // Default to cyan
-
-  // Confirmation modal state
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [pendingCurrentRole, setPendingCurrentRole] = useState<string | null>(null);
-
-  // Persist to localStorage
-  useEffect(() => {
-    if (currentRoleId) {
-      localStorage.setItem('currentRoleId', currentRoleId);
-    } else {
-      localStorage.removeItem('currentRoleId');
-    }
-  }, [currentRoleId]);
-
-  useEffect(() => {
-    localStorage.setItem('targetRoleIds', JSON.stringify(targetRoleIds));
-  }, [targetRoleIds]);
 
   // Update container size on mount and resize
   useEffect(() => {
@@ -253,51 +335,88 @@ export default function App() {
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle setting current role with confirmation if already set
-  const handleSetCurrentRole = (roleId: string) => {
+  // Handle setting current role
+  const handleSetCurrentRole = async (roleId: string) => {
     if (currentRoleId === null) {
-      // First time setting - no confirmation needed
+      // First time setting
       setCurrentRoleId(roleId);
-      // Clear targets that are no longer reachable
       const newAvailableTargets = getAvailableTargets(roleId);
-      setTargetRoleIds((prev) =>
-        prev.filter((tId) => newAvailableTargets.includes(tId) || canSetAsTarget(tId, roleId))
-      );
+      const updatedTargets = targetRoleIds.filter((tId) => newAvailableTargets.includes(tId) || canSetAsTarget(tId, roleId));
+      setTargetRoleIds(updatedTargets);
+
+      await updateProfile({
+        current_role_id: roleId,
+        target_role_ids: updatedTargets
+      });
     } else {
-      // Already have a current role - show confirmation
       setPendingCurrentRole(roleId);
       setShowConfirmation(true);
     }
   };
 
   // Handle setting target role
-  const handleSetTargetRole = (roleId: string) => {
+  const handleSetTargetRole = async (roleId: string) => {
     if (!canSetAsTarget(roleId, currentRoleId)) {
-      return; // Invalid target
+      return;
     }
     
-    // Only one target at a time
-    setTargetRoleIds([roleId]);
+    const updatedTargets = [roleId];
+    setTargetRoleIds(updatedTargets);
+
+    // If it's a brand new target, generate example tasks in the DB
+    const role = careerRoles.find(r => r.id === roleId);
+    if (role && !questTargets[roleId]) {
+      const newTasks = createExampleTasks(roleId, 'role', role.title);
+      setQuestTargets((prev) => ({
+        ...prev,
+        [roleId]: {
+          id: roleId,
+          type: 'role',
+          name: role.title,
+          tasks: newTasks
+        }
+      }));
+      await Promise.all(newTasks.map(t => saveQuestTask(t, roleId, 'role')));
+    }
+
+    await updateProfile({
+      target_role_ids: updatedTargets
+    });
   };
 
   // Handle clearing current role
-  const handleClearCurrentRole = () => {
+  const handleClearCurrentRole = async () => {
     setCurrentRoleId(null);
     setTargetRoleIds([]);
+
+    await updateProfile({
+      current_role_id: null,
+      target_role_ids: []
+    });
   };
 
   // Handle clearing target role
-  const handleClearTargetRole = (roleId: string) => {
-    setTargetRoleIds((prev) => prev.filter((id) => id !== roleId));
-    // Remove quest target when role target is cleared
+  const handleClearTargetRole = async (roleId: string) => {
+    const updatedTargets = targetRoleIds.filter((id) => id !== roleId);
+    setTargetRoleIds(updatedTargets);
+
+    const targetQuest = questTargets[roleId];
     setQuestTargets((prev) => {
       const newTargets = { ...prev };
       delete newTargets[roleId];
       return newTargets;
     });
+
+    if (targetQuest) {
+      await Promise.all(targetQuest.tasks.map(t => deleteQuestTask(t.id)));
+    }
+
+    await updateProfile({
+      target_role_ids: updatedTargets
+    });
   };
 
-  // Quest Log handlers
+  // Quest Log helpers for creating default items
   const createExampleTasks = (targetId: string, type: 'role' | 'skill', name: string): QuestTask[] => {
     if (type === 'role') {
       return [
@@ -340,134 +459,85 @@ export default function App() {
     }
   };
 
-  // Sync quest targets with actual targets (role + skills)
-  useEffect(() => {
-    setQuestTargets((prev) => {
-      const newTargets: QuestTargets = { ...prev };
+  // Quest Log handlers
+  const handleAddTask = async (targetId: string) => {
+    const target = questTargets[targetId];
+    if (!target) return;
 
-      // Add target role if it doesn't exist
-      if (targetRoleIds.length > 0) {
-        const roleId = targetRoleIds[0];
-        const role = careerRoles.find((r) => r.id === roleId);
-        if (role && !newTargets[roleId]) {
-          newTargets[roleId] = {
-            id: roleId,
-            type: 'role',
-            name: role.title,
-            tasks: createExampleTasks(roleId, 'role', role.title),
-          };
-        }
-      }
+    const newTask = createNewTask();
+    setQuestTargets((prev) => ({
+      ...prev,
+      [targetId]: {
+        ...target,
+        tasks: [...target.tasks, newTask],
+      },
+    }));
 
-      // Add target skills if they don't exist
-      targetSkillIds.forEach((skillId) => {
-        if (!newTargets[skillId] && designArchetype) {
-          const skills = getSkillsForArchetype(designArchetype);
-          const allSkills = [...skills.craft, ...skills.communication, ...skills.leadership, ...skills.business];
-          const skill = allSkills.find((s) => s.id === skillId);
-          if (skill) {
-            newTargets[skillId] = {
-              id: skillId,
-              type: 'skill',
-              name: skill.name,
-              tasks: createExampleTasks(skillId, 'skill', skill.name),
-            };
-          }
-        }
-      });
-
-      // Remove quest targets that are no longer targeted
-      Object.keys(newTargets).forEach((targetId) => {
-        const isRole = newTargets[targetId].type === 'role';
-        const isStillTargeted = isRole
-          ? targetRoleIds.includes(targetId)
-          : targetSkillIds.includes(targetId);
-
-        if (!isStillTargeted) {
-          delete newTargets[targetId];
-        }
-      });
-
-      return newTargets;
-    });
-  }, [targetRoleIds, targetSkillIds, designArchetype]);
-
-  const handleAddTask = (targetId: string) => {
-    setQuestTargets((prev) => {
-      const target = prev[targetId];
-      if (!target) return prev;
-
-      return {
-        ...prev,
-        [targetId]: {
-          ...target,
-          tasks: [...target.tasks, createNewTask()],
-        },
-      };
-    });
+    await saveQuestTask(newTask, targetId, target.type);
   };
 
-  const handleDeleteTask = (targetId: string, taskId: string) => {
-    setQuestTargets((prev) => {
-      const target = prev[targetId];
-      if (!target) return prev;
+  const handleDeleteTask = async (targetId: string, taskId: string) => {
+    const target = questTargets[targetId];
+    if (!target) return;
 
-      return {
-        ...prev,
-        [targetId]: {
-          ...target,
-          tasks: target.tasks.filter((t) => t.id !== taskId),
-        },
-      };
-    });
+    setQuestTargets((prev) => ({
+      ...prev,
+      [targetId]: {
+        ...target,
+        tasks: target.tasks.filter((t) => t.id !== taskId),
+      },
+    }));
+
+    await deleteQuestTask(taskId);
   };
 
-  const handleToggleTask = (targetId: string, taskId: string) => {
-    let completedTarget: { id: string; type: 'role' | 'skill' } | null = null;
+  const handleToggleTask = async (targetId: string, taskId: string) => {
+    const target = questTargets[targetId];
+    if (!target) return;
 
-    setQuestTargets((prev) => {
-      const target = prev[targetId];
-      if (!target) return prev;
+    const updatedTasks = target.tasks.map((t) =>
+      t.id === taskId ? { ...t, completed: !t.completed } : t
+    );
 
-      const updatedTasks = target.tasks.map((t) =>
-        t.id === taskId ? { ...t, completed: !t.completed } : t
-      );
+    const allComplete = updatedTasks.length > 0 && updatedTasks.every((t) => t.completed);
 
-      const allComplete = updatedTasks.length > 0 && updatedTasks.every((t) => t.completed);
-      if (allComplete) {
-        completedTarget = { id: targetId, type: target.type };
-      }
+    setQuestTargets((prev) => ({
+      ...prev,
+      [targetId]: { ...target, tasks: updatedTasks }
+    }));
 
-      return { ...prev, [targetId]: { ...target, tasks: updatedTasks } };
-    });
+    const updatedTask = updatedTasks.find((t) => t.id === taskId);
+    if (updatedTask) {
+      await saveQuestTask(updatedTask, targetId, target.type);
+    }
 
-    // Fire celebration after state is committed — no stale closure risk
-    if (completedTarget) {
-      const { id, type } = completedTarget as { id: string; type: 'role' | 'skill' };
-      handleTargetCompleted(id, type);
+    if (allComplete) {
+      handleTargetCompleted(targetId, target.type);
     }
   };
 
-  const handleUpdateTask = (
+  const handleUpdateTask = async (
     targetId: string,
     taskId: string,
     field: keyof QuestTask,
     value: string | boolean
   ) => {
-    setQuestTargets((prev) => {
-      const target = prev[targetId];
-      if (!target) return prev;
+    const target = questTargets[targetId];
+    if (!target) return;
 
-      return {
-        ...prev,
-        [targetId]: {
-          ...target,
-          tasks: target.tasks.map((t) =>
-            t.id === taskId ? { ...t, [field]: value } : t
-          ),
-        },
-      };
-    });
+    const updatedTasks = target.tasks.map((t) =>
+      t.id === taskId ? { ...t, [field]: value } : t
+    );
+
+    setQuestTargets((prev) => ({
+      ...prev,
+      [targetId]: { ...target, tasks: updatedTasks }
+    }));
+
+    const updatedTask = updatedTasks.find((t) => t.id === taskId);
+    if (updatedTask) {
+      await saveQuestTask(updatedTask, targetId, target.type);
+    }
   };
 
   const handleTargetCompleted = (targetId: string, type: 'role' | 'skill') => {
@@ -484,7 +554,6 @@ export default function App() {
 
   const handleUpdateProficiencyFromCelebration = () => {
     if (celebrationTarget && celebrationTarget.type === 'skill') {
-      // Find the skill and open its modal
       if (designArchetype) {
         const skills = getSkillsForArchetype(designArchetype);
         const allSkills = [...skills.craft, ...skills.communication, ...skills.leadership, ...skills.business];
@@ -517,6 +586,28 @@ export default function App() {
     });
   });
 
+  // Pulse loading overlay if database is synchronizing
+  if (loading && Object.keys(skillProficiencies).length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center space-y-4">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
+          className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-400 rounded-full"
+        />
+        <motion.h2
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+          className="text-lg font-semibold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"
+        >
+          Synchronizing Your Career Journey...
+        </motion.h2>
+        <p className="text-xs text-gray-500">Connecting to secure collaborative database</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-900 text-white">
       {/* Header */}
@@ -546,7 +637,7 @@ export default function App() {
                   onClick={() => setActiveTab('career-path')}
                   className={`px-3 md:px-5 py-2 rounded-md text-sm md:text-base font-medium transition-all duration-300 ${
                     activeTab === 'career-path'
-                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-600/10'
                       : 'text-gray-400 hover:text-white hover:bg-slate-700/50'
                   }`}
                 >
@@ -556,7 +647,7 @@ export default function App() {
                   onClick={() => setActiveTab('skill-tree')}
                   className={`px-3 md:px-5 py-2 rounded-md text-sm md:text-base font-medium transition-all duration-300 ${
                     activeTab === 'skill-tree'
-                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-600/10'
                       : 'text-gray-400 hover:text-white hover:bg-slate-700/50'
                   }`}
                 >
@@ -566,7 +657,7 @@ export default function App() {
                   onClick={() => setActiveTab('quest-log')}
                   className={`px-3 md:px-5 py-2 rounded-md text-sm md:text-base font-medium transition-all duration-300 ${
                     activeTab === 'quest-log'
-                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-600/10'
                       : 'text-gray-400 hover:text-white hover:bg-slate-700/50'
                   }`}
                 >
@@ -575,15 +666,29 @@ export default function App() {
               </div>
             </motion.nav>
 
-            {/* Right: Profile Button */}
+            {/* Right: Actions Block (Share Path + User Profile) */}
             <motion.div
+              className="flex items-center gap-3"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
+              {/* Share Path Button */}
+              {designArchetype && (
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500/50 text-xs md:text-sm font-medium transition-all duration-300 group cursor-pointer shadow-md"
+                  title="Share Growth Path"
+                >
+                  <Share2 className="w-4 h-4 text-gray-400 group-hover:text-cyan-400 transition-colors" />
+                  <span className="hidden sm:inline text-gray-300 group-hover:text-white transition-colors">Share Path</span>
+                </button>
+              )}
+
+              {/* Profile/Archetype Selector Button */}
               <button
                 onClick={() => setShowArchetypeModal(true)}
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500 transition-all duration-300 group"
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500 transition-all duration-300 group cursor-pointer"
                 aria-label="Profile & Settings"
                 title="Change Archetype"
               >
@@ -683,8 +788,8 @@ export default function App() {
                 >
                   {/* SVG for Connection Lines */}
                   <svg
-                    className="absolute inset-0 w-full h-full pointer-events-none"
-                    style={{ zIndex: 1 }}
+                     className="absolute inset-0 w-full h-full pointer-events-none"
+                     style={{ zIndex: 1 }}
                   >
                     {connections.map((conn, idx) => {
                       const isHighlighted =
@@ -693,11 +798,6 @@ export default function App() {
                         selectedRole?.id === conn.from.id ||
                         selectedRole?.id === conn.to.id;
 
-                      // Calculate pixel positions and add offset for dot center
-                      // Dots are w-4 h-4 (16px) on mobile, w-5 h-5 (20px) on desktop
-                      // Average ~18px, so radius offset is ~9px (but we'll calculate it properly)
-                      const dotRadius = 10; // Approximate center offset in pixels
-                      
                       const fromX = (conn.from.x / 100) * containerSize.width;
                       const fromY = (conn.from.y / 100) * containerSize.height;
                       const toX = (conn.to.x / 100) * containerSize.width;
@@ -766,7 +866,7 @@ export default function App() {
       {/* Skill Tree Tab */}
       {activeTab === 'skill-tree' && designArchetype && (() => {
         const excludedSet = new Set(excludedSkillIds);
-        const filterSkills = (list: import('./data/skills-data').Skill[]) => list.filter((s) => !excludedSet.has(s.id));
+        const filterSkills = (list: any[]) => list.filter((s) => !excludedSet.has(s.id));
         const raw = getSkillsForArchetype(designArchetype);
         const categories = [
           {
@@ -801,7 +901,6 @@ export default function App() {
 
         const activeCategory = categories[activeCategoryIndex];
 
-        // Safety check: ensure we have a valid category
         if (!activeCategory || !activeCategory.skills) {
           return null;
         }
@@ -815,8 +914,7 @@ export default function App() {
               onCategoryChange={setActiveCategoryIndex}
             />
 
-            {/* Active Category Content with Animation */}
-            {/* Add padding: bottom for mobile nav (80px), desktop keyboard hints (60px) */}
+            {/* Active Category Content */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeCategoryIndex}
@@ -863,7 +961,7 @@ export default function App() {
                 </p>
                 <button
                   onClick={() => setShowArchetypeModal(true)}
-                  className="px-8 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg transition-all duration-300 font-medium shadow-lg"
+                  className="px-8 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg transition-all duration-300 font-medium shadow-lg cursor-pointer"
                 >
                   Choose Archetype
                 </button>
@@ -877,7 +975,6 @@ export default function App() {
       {activeTab === 'quest-log' && (
         <QuestLog
           targets={Object.values(questTargets).sort((a, b) => {
-            // Role always comes first, then skills
             if (a.type === 'role' && b.type === 'skill') return -1;
             if (a.type === 'skill' && b.type === 'role') return 1;
             return 0;
@@ -939,14 +1036,18 @@ export default function App() {
             setShowConfirmation(false);
             setPendingCurrentRole(null);
           }}
-          onConfirm={() => {
+          onConfirm={async () => {
             if (pendingCurrentRole) {
               setCurrentRoleId(pendingCurrentRole);
-              // Clear targets that are no longer reachable
               const newAvailableTargets = getAvailableTargets(pendingCurrentRole);
-              setTargetRoleIds((prev) =>
-                prev.filter((tId) => newAvailableTargets.includes(tId) || canSetAsTarget(tId, pendingCurrentRole))
-              );
+              const updatedTargets = targetRoleIds.filter((tId) => newAvailableTargets.includes(tId) || canSetAsTarget(tId, pendingCurrentRole));
+              setTargetRoleIds(updatedTargets);
+              
+              await updateProfile({
+                current_role_id: pendingCurrentRole,
+                target_role_ids: updatedTargets
+              });
+
               setShowConfirmation(false);
               setPendingCurrentRole(null);
             }
@@ -984,6 +1085,12 @@ export default function App() {
           onToggleTarget={handleToggleTarget}
         />
       )}
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+      />
     </div>
   );
 }

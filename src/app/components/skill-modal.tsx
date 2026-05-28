@@ -11,6 +11,7 @@ interface SkillModalProps {
   isUnlocked: boolean;
   targetSkillIds: string[];
   onToggleTarget: (skillId: string) => void;
+  readOnly?: boolean;
 }
 
 const proficiencyLevels: { value: SkillProficiency; label: string; icon: any; color: string; description: string }[] = [
@@ -46,9 +47,10 @@ export function SkillModal({
   isUnlocked,
   targetSkillIds,
   onToggleTarget,
+  readOnly = false,
 }: SkillModalProps) {
   const handleProficiencySelect = (proficiency: SkillProficiency) => {
-    if (!isUnlocked) return;
+    if (!isUnlocked || readOnly) return;
     
     // Toggle: if clicking the same proficiency, deselect it (set back to 'locked')
     if (currentProficiency === proficiency) {
@@ -56,8 +58,6 @@ export function SkillModal({
     } else {
       onProficiencyChange(skill.id, proficiency);
     }
-    // Optional: Close modal after selection
-    // onClose();
   };
 
   const isTargeted = targetSkillIds.includes(skill.id);
@@ -93,7 +93,7 @@ export function SkillModal({
                 {/* Close Button */}
                 <button
                   onClick={onClose}
-                  className="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500 transition-all duration-300 group"
+                  className="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500 transition-all duration-300 group cursor-pointer"
                   aria-label="Close"
                 >
                   <X className="w-5 h-5 text-gray-400 group-hover:text-cyan-400 transition-colors" />
@@ -112,12 +112,12 @@ export function SkillModal({
 
               {/* Content */}
               <div className="p-8">
-                {/* Target Button - At the top, only show if unlocked and no proficiency set */}
-                {isUnlocked && currentProficiency === 'locked' && (
+                {/* Target Button - At the top, only show if unlocked, no proficiency set, and not readOnly */}
+                {isUnlocked && currentProficiency === 'locked' && !readOnly && (
                   <div className="mb-6">
                     <motion.button
                       onClick={() => onToggleTarget(skill.id)}
-                      className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
+                      className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left cursor-pointer ${
                         isTargeted
                           ? 'border-orange-500 bg-orange-500/10 shadow-lg shadow-orange-500/20'
                           : 'border-slate-700 bg-slate-800/50 hover:border-slate-600 hover:bg-slate-800'
@@ -174,7 +174,7 @@ export function SkillModal({
                 )}
 
                 <h3 className="text-lg font-semibold text-white mb-4">
-                  {isUnlocked ? 'Set Your Proficiency Level' : 'Proficiency Levels'}
+                  {readOnly ? 'Designer Proficiency Level' : isUnlocked ? 'Set Your Proficiency Level' : 'Proficiency Levels'}
                 </h3>
 
                 {/* Proficiency Options */}
@@ -182,7 +182,7 @@ export function SkillModal({
                   {proficiencyLevels.map((level) => {
                     const Icon = level.icon;
                     const isSelected = currentProficiency === level.value;
-                    const isDisabled = !isUnlocked;
+                    const isDisabled = !isUnlocked || readOnly;
 
                     return (
                       <motion.button
@@ -191,12 +191,12 @@ export function SkillModal({
                         disabled={isDisabled}
                         type="button"
                         className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
-                          isDisabled
+                          isDisabled && !isSelected
                             ? 'border-slate-700 bg-slate-800/30 cursor-not-allowed opacity-50'
                             : isSelected
                             ? 'border-cyan-500 bg-cyan-500/10 shadow-lg shadow-cyan-500/20'
                             : 'border-slate-700 bg-slate-800/50 hover:border-slate-600 hover:bg-slate-800'
-                        }`}
+                        } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                         whileHover={!isDisabled ? { scale: 1.02 } : {}}
                         whileTap={!isDisabled ? { scale: 0.98 } : {}}
                       >
@@ -235,7 +235,7 @@ export function SkillModal({
                               )}
                             </div>
                             <p className="text-sm text-gray-400">
-                              {isSelected ? 'Click again to deselect' : level.description}
+                              {isSelected && !readOnly ? 'Click again to deselect' : level.description}
                             </p>
                           </div>
                         </div>

@@ -43,3 +43,18 @@ export function getSupabaseClient(shareToken?: string) {
   });
 }
 export type SupabaseClientType = ReturnType<typeof getSupabaseClient>;
+
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+/**
+ * Privileged admin client bypassing Row-Level Security.
+ * Kept strictly on the server-side to prevent exposing the service key to the client.
+ */
+export const supabaseAdmin = typeof window === 'undefined' && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
+  : supabase;

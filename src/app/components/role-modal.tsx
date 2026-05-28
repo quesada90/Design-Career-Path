@@ -152,6 +152,7 @@ interface RoleModalProps {
   onClearTargetRole: (roleId: string) => void;
   onSwitchToSkillTree: () => void;
   customTimeAllocations?: Record<string, TimeAllocation>;
+  readOnly?: boolean;
 }
 
 export function RoleModal({
@@ -176,6 +177,7 @@ export function RoleModal({
   onClearTargetRole,
   onSwitchToSkillTree,
   customTimeAllocations,
+  readOnly = false,
 }: RoleModalProps) {
   const roleState = getRoleState(roleId, currentRoleId, targetRoleIds);
   const isCurrentRole = roleId === currentRoleId;
@@ -250,7 +252,7 @@ export function RoleModal({
                 </div>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-full"
+                  className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-full cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -305,7 +307,7 @@ export function RoleModal({
                       onSwitchToSkillTree();
                       onClose();
                     }}
-                    className="flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                    className="flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer"
                   >
                     <span>View in Skill Tree</span>
                     <ExternalLink className="w-4 h-4" />
@@ -330,86 +332,88 @@ export function RoleModal({
               </section>
 
               {/* Role Actions */}
-              <section className="mt-6 pt-6 border-t border-slate-700">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Your Progress
-                </h3>
-                
-                {/* Status Badge */}
-                <div className="mb-4">
-                  {roleState === 'completed' && (
-                    <div className="flex items-center gap-2 text-green-400">
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span className="font-medium">Completed Role</span>
-                    </div>
-                  )}
-                  {roleState === 'current' && (
-                    <div className="flex items-center gap-2 text-white">
-                      <Circle className="w-5 h-5 fill-white" />
-                      <span className="font-medium">Current Role</span>
-                    </div>
-                  )}
-                  {roleState === 'target' && (
-                    <div className="flex items-center gap-2 text-yellow-400">
-                      <Target className="w-5 h-5" />
-                      <span className="font-medium">Target Role</span>
-                    </div>
-                  )}
-                  {roleState === 'future' && (
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <Circle className="w-5 h-5" />
-                      <span className="font-medium">Future Role</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col gap-2">
-                  {/* Set/Clear Current Role */}
-                  {isCurrentRole ? (
-                    <button
-                      onClick={onClearCurrentRole}
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors border border-slate-700"
-                    >
-                      <X className="w-4 h-4" />
-                      <span>Clear as Current Role</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => onSetCurrentRole(roleId)}
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-lg transition-all shadow-lg"
-                    >
-                      <Circle className="w-4 h-4" />
-                      <span>Set as Current Role</span>
-                    </button>
-                  )}
-
-                  {/* Set/Clear Target Role */}
-                  {isTargetRole ? (
-                    <button
-                      onClick={() => onClearTargetRole(roleId)}
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors border border-slate-700"
-                    >
-                      <X className="w-4 h-4" />
-                      <span>Clear as Target Role</span>
-                    </button>
-                  ) : canBeTarget ? (
-                    <button
-                      onClick={() => onSetTargetRole(roleId)}
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white font-semibold rounded-lg transition-all shadow-lg"
-                    >
-                      <Target className="w-4 h-4" />
-                      <span>Set as Target Role</span>
-                    </button>
-                  ) : (
-                    roleState !== 'completed' && roleState !== 'current' && (
-                      <div className="px-4 py-3 bg-slate-800/50 text-gray-400 rounded-lg text-sm text-center border border-slate-700">
-                        Set a current role first to select targets
+              {!readOnly && (
+                <section className="mt-6 pt-6 border-t border-slate-700">
+                  <h3 className="text-lg font-semibold text-white mb-3">
+                    Your Progress
+                  </h3>
+                  
+                  {/* Status Badge */}
+                  <div className="mb-4">
+                    {roleState === 'completed' && (
+                      <div className="flex items-center gap-2 text-green-400">
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span className="font-medium">Completed Role</span>
                       </div>
-                    )
-                  )}
-                </div>
-              </section>
+                    )}
+                    {roleState === 'current' && (
+                      <div className="flex items-center gap-2 text-white">
+                        <Circle className="w-5 h-5 fill-white" />
+                        <span className="font-medium">Current Role</span>
+                      </div>
+                    )}
+                    {roleState === 'target' && (
+                      <div className="flex items-center gap-2 text-yellow-400">
+                        <Target className="w-5 h-5" />
+                        <span className="font-medium">Target Role</span>
+                      </div>
+                    )}
+                    {roleState === 'future' && (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <Circle className="w-5 h-5" />
+                        <span className="font-medium">Future Role</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col gap-2">
+                    {/* Set/Clear Current Role */}
+                    {isCurrentRole ? (
+                      <button
+                        onClick={onClearCurrentRole}
+                        className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors border border-slate-700 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Clear as Current Role</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onSetCurrentRole(roleId)}
+                        className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-lg transition-all shadow-lg cursor-pointer"
+                      >
+                        <Circle className="w-4 h-4" />
+                        <span>Set as Current Role</span>
+                      </button>
+                    )}
+
+                    {/* Set/Clear Target Role */}
+                    {isTargetRole ? (
+                      <button
+                        onClick={() => onClearTargetRole(roleId)}
+                        className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors border border-slate-700 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Clear as Target Role</span>
+                      </button>
+                    ) : canBeTarget ? (
+                      <button
+                        onClick={() => onSetTargetRole(roleId)}
+                        className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white font-semibold rounded-lg transition-all shadow-lg cursor-pointer"
+                      >
+                        <Target className="w-4 h-4" />
+                        <span>Set as Target Role</span>
+                      </button>
+                    ) : (
+                      roleState !== 'completed' && roleState !== 'current' && (
+                        <div className="px-4 py-3 bg-slate-800/50 text-gray-400 rounded-lg text-sm text-center border border-slate-700">
+                          Set a current role first to select targets
+                        </div>
+                      )
+                    )}
+                  </div>
+                </section>
+              )}
             </div>
           </motion.div>
         </>

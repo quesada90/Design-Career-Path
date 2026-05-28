@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-supabase-url.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   if (typeof window === 'undefined') {
     console.warn(
       'Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY) are not set. Database operations will fail.'
@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 /**
  * Default standard Supabase client for authenticated users.
- * Automatically utilizes Clerk/Supabase session tokens when called on the client.
+ * Automatically utilizes Clerk/Swipbase session tokens when called on the client.
  */
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -31,7 +31,10 @@ export function getSupabaseClient(shareToken?: string) {
     return supabase;
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-supabase-url.co';
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+
+  return createClient(url, key, {
     global: {
       headers: {
         'x-share-token': shareToken,

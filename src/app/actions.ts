@@ -237,8 +237,12 @@ export async function fetchQuestTasks() {
 export async function saveQuestTask(task: Omit<QuestTask, 'id'> & { id?: string }, targetId: string, targetType: 'role' | 'skill') {
   const userId = await requireAuth();
 
+  // Ensure only valid UUIDs are passed to PostgreSQL UUID primary key
+  const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  const validatedTaskId = task.id && isUUID(task.id) ? task.id : undefined;
+
   const { error } = await supabase.from('quest_tasks').upsert({
-    id: task.id || undefined, // Supabase gen_random_uuid will generate if undefined
+    id: validatedTaskId, // Supabase gen_random_uuid will generate if undefined
     profile_id: userId,
     target_id: targetId,
     target_type: targetType,

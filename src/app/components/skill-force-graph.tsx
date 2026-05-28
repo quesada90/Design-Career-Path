@@ -25,8 +25,8 @@ interface GraphNode {
   level: number;
   x?: number;
   y?: number;
-  fx?: number | null;
-  fy?: number | null;
+  fx?: number;
+  fy?: number;
 }
 
 interface GraphLink {
@@ -55,7 +55,7 @@ export function SkillForceGraph({
   categoryDescription,
   color,
 }: SkillForceGraphProps) {
-  const graphRef = useRef<{ zoomToFit: (duration?: number) => void; zoom: (k: number, duration?: number) => void } | null>(null);
+  const graphRef = useRef<any>(null);
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -287,8 +287,8 @@ export function SkillForceGraph({
     const isHighlighted = hoveredNode?.id === node.id;
     const isConnected = hoveredNode && graphData.links.some(
       link => {
-        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        const sourceId = typeof link.source === 'object' ? (link.source as any).id : link.source;
+        const targetId = typeof link.target === 'object' ? (link.target as any).id : link.target;
         return (
           (sourceId === hoveredNode.id && targetId === node.id) ||
           (targetId === hoveredNode.id && sourceId === node.id)
@@ -362,8 +362,8 @@ export function SkillForceGraph({
     const width = isHighlighted ? 2 : 1;
 
     ctx.beginPath();
-    ctx.moveTo(link.source.x, link.source.y);
-    ctx.lineTo(link.target.x, link.target.y);
+    ctx.moveTo(link.source.x || 0, link.source.y || 0);
+    ctx.lineTo(link.target.x || 0, link.target.y || 0);
     ctx.strokeStyle = isUnlocked ? `rgba(71, 85, 105, ${opacity})` : `rgba(51, 65, 85, ${opacity})`;
     ctx.lineWidth = width;
     if (!isUnlocked) {
@@ -522,7 +522,7 @@ export function SkillForceGraph({
         {/* Force Graph */}
         <ForceGraph2D
           ref={graphRef}
-          graphData={filteredData}
+          graphData={filteredData as any}
           width={dimensions.width}
           height={dimensions.height}
           backgroundColor="#0f172a"
@@ -534,7 +534,7 @@ export function SkillForceGraph({
           onNodeDragEnd={handleNodeDrag}
           onNodeHover={(node) => setHoveredNode(node as GraphNode | null)}
           enableNodeDrag={true}
-          enableZoomPanInteraction={true}
+          enableZoomInteraction={true}
           enablePointerInteraction={true}
           cooldownTime={3000} // Option B: Run until stable
           d3AlphaDecay={0.02}

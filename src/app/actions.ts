@@ -3,7 +3,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { supabase } from '../lib/supabase';
 import { revalidatePath } from 'next/cache';
-import type { QuestTask } from '../types/quest-log';
+import type { QuestTask } from './types/quest-log';
 
 // Helper to secure user routes and retrieve active Clerk ID
 async function requireAuth() {

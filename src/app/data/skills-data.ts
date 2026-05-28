@@ -924,6 +924,7 @@ export const motionDesignSkills: Skill[] = [
     y: 85,
     description: 'Proficiency in Premiere Pro for editing, color correction, compositing, sound design',
     unlockAtLevel: 2,
+    connections: [],
   },
 ];
 
@@ -995,6 +996,7 @@ export const designSystemsSkills: Skill[] = [
     y: 60,
     description: "Producing component usage guidelines: do/don't examples, code snippets, interaction specs",
     unlockAtLevel: 2,
+    connections: [],
   },
   {
     id: 'craft-ds-frontend',
@@ -1005,6 +1007,7 @@ export const designSystemsSkills: Skill[] = [
     y: 85,
     description: 'Writing production-quality code to implement design system components',
     unlockAtLevel: 2,
+    connections: [],
   },
   {
     id: 'craft-ds-versioning',
@@ -1015,6 +1018,7 @@ export const designSystemsSkills: Skill[] = [
     y: 85,
     description: 'Managing changes using Git and Figma branching, implementing semantic versioning',
     unlockAtLevel: 2,
+    connections: [],
   },
   {
     id: 'craft-ds-multiplatform',

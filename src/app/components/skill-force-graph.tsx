@@ -3,6 +3,21 @@ import ForceGraph2D from 'react-force-graph-2d';
 import { motion, AnimatePresence } from 'motion/react';
 import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
 import type { Skill, SkillProficiency } from '../data/skills-data';
+import {
+  CATEGORY_COLORS,
+  SKILL_NODE_COLORS,
+  CANVAS_BG,
+  CANVAS_TEXT_COLOR,
+  LINK_COLOR_BASE,
+  LINK_COLOR_TARGET,
+  PARTICLE_SPEED_MIN,
+  PARTICLE_SPEED_MAX,
+  PARTICLE_LIFE_MIN,
+  PARTICLE_LIFE_MAX,
+  PARTICLE_SIZE_MIN,
+  PARTICLE_SIZE_MAX,
+  PARTICLE_EMIT_COUNT,
+} from '../config/tokens';
 
 interface SkillForceGraphProps {
   skills: Skill[];
@@ -78,16 +93,16 @@ export function SkillForceGraph({
     const newParticles: Particle[] = [];
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count;
-      const speed = 0.5 + Math.random() * 1.5;
+      const speed = PARTICLE_SPEED_MIN + Math.random() * (PARTICLE_SPEED_MAX - PARTICLE_SPEED_MIN);
       newParticles.push({
         x: node.x!,
         y: node.y!,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 1,
-        maxLife: 60 + Math.random() * 30,
+        maxLife: PARTICLE_LIFE_MIN + Math.random() * (PARTICLE_LIFE_MAX - PARTICLE_LIFE_MIN),
         color: particleColor,
-        size: 2 + Math.random() * 2,
+        size: PARTICLE_SIZE_MIN + Math.random() * (PARTICLE_SIZE_MAX - PARTICLE_SIZE_MIN),
       });
     }
     particlesRef.current = [...particlesRef.current, ...newParticles];
@@ -142,7 +157,7 @@ export function SkillForceGraph({
         if (wasLocked && isNowUnlocked && graphData.nodes.length > 0) {
           const node = graphData.nodes.find(n => n.id === skill.id);
           if (node && node.x !== undefined && node.y !== undefined) {
-            emitParticles(node, '#06b6d4', 20);
+            emitParticles(node, CATEGORY_COLORS.craft, PARTICLE_EMIT_COUNT);
           }
         }
       });
@@ -213,14 +228,14 @@ export function SkillForceGraph({
 
   // Node color based on proficiency state
   const getNodeColor = (node: GraphNode) => {
-    if (!node.isUnlocked) return '#475569'; // Grey for locked
-    if (node.isTarget && node.proficiency === 'locked') return '#f97316'; // Orange for targets
+    if (!node.isUnlocked) return SKILL_NODE_COLORS.locked;
+    if (node.isTarget && node.proficiency === 'locked') return SKILL_NODE_COLORS.target;
 
     switch (node.proficiency) {
-      case 'know': return '#3b82f6'; // Blue
-      case 'experience': return '#a855f7'; // Purple
-      case 'master': return '#eab308'; // Yellow
-      default: return '#06b6d4'; // Cyan for unlocked
+      case 'know':       return SKILL_NODE_COLORS.know;
+      case 'experience': return SKILL_NODE_COLORS.experience;
+      case 'master':     return SKILL_NODE_COLORS.master;
+      default:           return CATEGORY_COLORS.craft; // Cyan for unlocked
     }
   };
 
@@ -319,7 +334,7 @@ export function SkillForceGraph({
     ctx.fill();
 
     // Border
-    ctx.strokeStyle = isHighlighted ? '#ffffff' : nodeColor;
+    ctx.strokeStyle = isHighlighted ? CANVAS_TEXT_COLOR : nodeColor;
     ctx.lineWidth = isHighlighted ? 2 : 1;
     if (node.isTarget) {
       ctx.setLineDash([2, 2]);
@@ -332,7 +347,7 @@ export function SkillForceGraph({
     ctx.font = `${12 / globalScale}px Sans-Serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = CANVAS_TEXT_COLOR;
     ctx.fillText(node.name, node.x!, node.y! + size + 4);
 
     // Restore context state
@@ -364,7 +379,9 @@ export function SkillForceGraph({
     ctx.beginPath();
     ctx.moveTo(link.source.x || 0, link.source.y || 0);
     ctx.lineTo(link.target.x || 0, link.target.y || 0);
-    ctx.strokeStyle = isUnlocked ? `rgba(71, 85, 105, ${opacity})` : `rgba(51, 65, 85, ${opacity})`;
+    ctx.strokeStyle = isUnlocked
+      ? `${LINK_COLOR_BASE} ${opacity})`
+      : `${LINK_COLOR_TARGET} ${opacity})`;
     ctx.lineWidth = width;
     if (!isUnlocked) {
       ctx.setLineDash([4, 4]);
@@ -525,7 +542,7 @@ export function SkillForceGraph({
           graphData={filteredData as any}
           width={dimensions.width}
           height={dimensions.height}
-          backgroundColor="#0f172a"
+          backgroundColor={CANVAS_BG}
           nodeCanvasObject={paintNode}
           linkCanvasObject={paintLink}
           nodeLabel={() => ''} // Disable built-in tooltip

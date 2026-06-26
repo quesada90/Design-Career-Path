@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Share2, Loader2 } from 'lucide-react';
+import { CATEGORY_COLORS } from './config/tokens';
 import dynamic from 'next/dynamic';
 import { CareerNode } from './components/career-node';
 import { ConnectionLine } from './components/connection-line';
@@ -300,7 +301,7 @@ export default function App() {
 
   // Get current role color for skill tree
   const currentRole = careerRoles.find((r) => r.id === currentRoleId);
-  const roleColor = currentRole?.color || '#06b6d4'; // Default to cyan
+  const roleColor = currentRole?.color || CATEGORY_COLORS.craft;
 
   // Update container size on mount and resize
   useEffect(() => {
@@ -880,21 +881,21 @@ export default function App() {
             name: '💬 Communication',
             description: 'Communicate, collaborate, and influence across teams and the industry',
             skills: filterSkills(raw.communication),
-            color: '#ec4899',
+            color: CATEGORY_COLORS.communication,
             icon: '💬',
           },
           {
             name: '👥 Leadership',
             description: 'Lead teams, mentor designers, and grow organizational design impact',
             skills: filterSkills(raw.leadership),
-            color: '#a855f7',
+            color: CATEGORY_COLORS.leadership,
             icon: '👥',
           },
           {
             name: '💼 Business',
             description: 'Align design with business strategy and demonstrate impact',
             skills: filterSkills(raw.business),
-            color: '#3b82f6',
+            color: CATEGORY_COLORS.business,
             icon: '💼',
           },
         ];

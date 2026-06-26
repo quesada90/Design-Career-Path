@@ -1,3 +1,5 @@
+import { DEFAULT_DEADLINE_DAYS } from '../config/tokens';
+
 /**
  * Quest Log Data Types
  * Manages SMART goals for target roles and skills
@@ -44,7 +46,7 @@ export function createNewTask(): QuestTask {
     name: '',
     measurableType: 'quantity',
     measurableValue: '1',
-    deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+    deadline: new Date(Date.now() + DEFAULT_DEADLINE_DAYS * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     completed: false,
   };
 }

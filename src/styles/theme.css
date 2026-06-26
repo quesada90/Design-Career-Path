@@ -2,6 +2,19 @@
 
 :root {
   --font-size: 16px;
+
+  /* Typography scale (consumed by @layer base h1-h4, label, button, input) */
+  --text-2xl: 1.5rem;
+  --text-xl:  1.25rem;
+  --text-lg:  1.125rem;
+  --text-base: 1rem;
+
+  /* App-specific design tokens (mirrors src/app/config/tokens.ts) */
+  --app-craft:         #06b6d4;
+  --app-communication: #ec4899;
+  --app-leadership:    #a855f7;
+  --app-business:      #3b82f6;
+  --app-canvas-bg:     #0f172a;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;

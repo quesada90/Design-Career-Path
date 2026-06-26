@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { levelYPositions } from '../config/career-levels';
+import { LEVEL_COLORS } from '../config/tokens';
 
 interface SidebarLabelsProps {
   position: 'left' | 'right';
@@ -8,25 +9,25 @@ interface SidebarLabelsProps {
 // Define labels for each level (bottom to top)
 // Labels are defined in ascending level order (0 = bottom, 7 = top)
 const leftSidebarLabels = [
-  { level: 0, text: 'SUBTASK', color: '#60A5FA' },
-  { level: 1, text: 'TASK', color: '#34D399' },
-  { level: 2, text: 'FEATURE', color: '#A3E635' },
-  { level: 3, text: 'TEAM', color: '#FDE047' },
-  { level: 4, text: 'PILAR', color: '#FB923C' },
-  { level: 5, text: 'ORGANIZATION', color: '#F97316' },
-  { level: 6, text: 'COMPANY-WIDE', color: '#EF4444' },
-  { level: 7, text: 'INDUSTRY', color: '#EC4899' },
+  { level: 0, text: 'SUBTASK' },
+  { level: 1, text: 'TASK' },
+  { level: 2, text: 'FEATURE' },
+  { level: 3, text: 'TEAM' },
+  { level: 4, text: 'PILAR' },
+  { level: 5, text: 'ORGANIZATION' },
+  { level: 6, text: 'COMPANY-WIDE' },
+  { level: 7, text: 'INDUSTRY' },
 ];
 
 const rightSidebarLabels = [
-  { level: 0, text: 'SUPERVISED', color: '#60A5FA' },
-  { level: 1, text: 'EXECUTES', color: '#34D399' },
-  { level: 2, text: 'EXECUTES +', color: '#A3E635' },
-  { level: 3, text: 'PROPOSES', color: '#FDE047' },
-  { level: 4, text: 'ADVISES', color: '#FB923C' },
-  { level: 5, text: 'DECIDES', color: '#F97316' },
-  { level: 6, text: 'DEFINES', color: '#EF4444' },
-  { level: 7, text: 'DEFINES', color: '#EC4899' },
+  { level: 0, text: 'SUPERVISED' },
+  { level: 1, text: 'EXECUTES' },
+  { level: 2, text: 'EXECUTES +' },
+  { level: 3, text: 'PROPOSES' },
+  { level: 4, text: 'ADVISES' },
+  { level: 5, text: 'DECIDES' },
+  { level: 6, text: 'DEFINES' },
+  { level: 7, text: 'DEFINES' },
 ];
 
 export function SidebarLabels({ position }: SidebarLabelsProps) {
@@ -36,6 +37,7 @@ export function SidebarLabels({ position }: SidebarLabelsProps) {
   // Map labels with their calculated Y positions from config
   const labels = labelData.map((label) => ({
     ...label,
+    color: LEVEL_COLORS[label.level] ?? '#ffffff',
     y: levelYPositions[label.level],
   }));
 

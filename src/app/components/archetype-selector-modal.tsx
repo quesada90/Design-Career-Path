@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Check, ChevronRight, ChevronLeft, X, Plus, RotateCcw } from 'lucide-react';
 import { careerRoles } from './career-data';
 import { getSkillsForArchetype } from '../data/skills-data';
+import { CATEGORY_COLORS } from '../config/tokens';
 import {
   CATEGORY_META,
   getDefaultAllocation,
@@ -122,10 +123,10 @@ function StepArchetype({
 // ── Step 2: Skills ───────────────────────────────────────────────────────────
 
 const SKILL_CATEGORY_TABS: { key: 'craft' | 'communication' | 'leadership' | 'business'; label: string; emoji: string; color: string }[] = [
-  { key: 'craft',         label: 'Craft',        emoji: '🎨', color: '#06b6d4' },
-  { key: 'communication', label: 'Communication', emoji: '💬', color: '#ec4899' },
-  { key: 'leadership',    label: 'Leadership',    emoji: '👥', color: '#a855f7' },
-  { key: 'business',      label: 'Business',      emoji: '💼', color: '#3b82f6' },
+  { key: 'craft',         label: 'Craft',        emoji: '🎨', color: CATEGORY_COLORS.craft },
+  { key: 'communication', label: 'Communication', emoji: '💬', color: CATEGORY_COLORS.communication },
+  { key: 'leadership',    label: 'Leadership',    emoji: '👥', color: CATEGORY_COLORS.leadership },
+  { key: 'business',      label: 'Business',      emoji: '💼', color: CATEGORY_COLORS.business },
 ];
 
 function StepSkills({

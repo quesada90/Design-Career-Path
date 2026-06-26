@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Share2, Loader2 } from 'lucide-react';
 import { CATEGORY_COLORS } from './config/tokens';
@@ -303,6 +303,44 @@ export default function App() {
   const currentRole = careerRoles.find((r) => r.id === currentRoleId);
   const roleColor = currentRole?.color || CATEGORY_COLORS.craft;
 
+  // Skill tree category definitions — memoized to avoid rebuilding on every render
+  const skillTreeCategories = useMemo(() => {
+    if (!designArchetype) return null;
+    const excludedSet = new Set(excludedSkillIds);
+    const filterSkills = (list: Skill[]) => list.filter((s) => !excludedSet.has(s.id));
+    const raw = getSkillsForArchetype(designArchetype);
+    return [
+      {
+        name: '🎨 Craft',
+        description: `${designArchetype.charAt(0).toUpperCase() + designArchetype.slice(1)}-specific skills to master your design craft`,
+        skills: filterSkills(raw.craft),
+        color: roleColor,
+        icon: '🎨',
+      },
+      {
+        name: '💬 Communication',
+        description: 'Communicate, collaborate, and influence across teams and the industry',
+        skills: filterSkills(raw.communication),
+        color: CATEGORY_COLORS.communication,
+        icon: '💬',
+      },
+      {
+        name: '👥 Leadership',
+        description: 'Lead teams, mentor designers, and grow organizational design impact',
+        skills: filterSkills(raw.leadership),
+        color: CATEGORY_COLORS.leadership,
+        icon: '👥',
+      },
+      {
+        name: '💼 Business',
+        description: 'Align design with business strategy and demonstrate impact',
+        skills: filterSkills(raw.business),
+        color: CATEGORY_COLORS.business,
+        icon: '💼',
+      },
+    ];
+  }, [designArchetype, excludedSkillIds, roleColor]);
+
   // Update container size on mount and resize
   useEffect(() => {
     const updateSize = () => {
@@ -321,9 +359,9 @@ export default function App() {
     };
   }, []);
 
-  const handleNodeClick = (role: CareerRole) => {
+  const handleNodeClick = useCallback((role: CareerRole) => {
     setSelectedRole(role);
-  };
+  }, []);
 
   const handleCloseModal = () => {
     setSelectedRole(null);
@@ -461,7 +499,7 @@ export default function App() {
   };
 
   // Quest Log handlers
-  const handleAddTask = async (targetId: string) => {
+  const handleAddTask = useCallback(async (targetId: string) => {
     const target = questTargets[targetId];
     if (!target) return;
 
@@ -475,9 +513,9 @@ export default function App() {
     }));
 
     await saveQuestTask(newTask, targetId, target.type);
-  };
+  }, [questTargets]);
 
-  const handleDeleteTask = async (targetId: string, taskId: string) => {
+  const handleDeleteTask = useCallback(async (targetId: string, taskId: string) => {
     const target = questTargets[targetId];
     if (!target) return;
 
@@ -490,7 +528,7 @@ export default function App() {
     }));
 
     await deleteQuestTask(taskId);
-  };
+  }, [questTargets]);
 
   const handleToggleTask = async (targetId: string, taskId: string) => {
     const target = questTargets[targetId];
@@ -567,25 +605,19 @@ export default function App() {
     }
   };
 
-  // Get all connections for drawing lines
-  const connections: Array<{
-    from: CareerRole;
-    to: CareerRole;
-    color: string;
-  }> = [];
-
-  careerRoles.forEach((role) => {
-    role.connections.forEach((connId) => {
-      const toRole = careerRoles.find((r) => r.id === connId);
-      if (toRole) {
-        connections.push({
-          from: role,
-          to: toRole,
-          color: toRole.color,
-        });
-      }
+  // Get all connections for drawing lines — memoized since careerRoles is static
+  const connections = useMemo(() => {
+    const result: Array<{ from: CareerRole; to: CareerRole; color: string }> = [];
+    careerRoles.forEach((role) => {
+      role.connections.forEach((connId) => {
+        const toRole = careerRoles.find((r) => r.id === connId);
+        if (toRole) {
+          result.push({ from: role, to: toRole, color: toRole.color });
+        }
+      });
     });
-  });
+    return result;
+  }, []); // careerRoles is a module-level constant — no deps needed
 
   // Pulse loading overlay if database is synchronizing
   if (loading && Object.keys(skillProficiencies).length === 0) {
@@ -865,57 +897,16 @@ export default function App() {
       )}
 
       {/* Skill Tree Tab */}
-      {activeTab === 'skill-tree' && designArchetype && (() => {
-        const excludedSet = new Set(excludedSkillIds);
-        const filterSkills = (list: any[]) => list.filter((s) => !excludedSet.has(s.id));
-        const raw = getSkillsForArchetype(designArchetype);
-        const categories = [
-          {
-            name: '🎨 Craft',
-            description: `${designArchetype.charAt(0).toUpperCase() + designArchetype.slice(1)}-specific skills to master your design craft`,
-            skills: filterSkills(raw.craft),
-            color: roleColor,
-            icon: '🎨',
-          },
-          {
-            name: '💬 Communication',
-            description: 'Communicate, collaborate, and influence across teams and the industry',
-            skills: filterSkills(raw.communication),
-            color: CATEGORY_COLORS.communication,
-            icon: '💬',
-          },
-          {
-            name: '👥 Leadership',
-            description: 'Lead teams, mentor designers, and grow organizational design impact',
-            skills: filterSkills(raw.leadership),
-            color: CATEGORY_COLORS.leadership,
-            icon: '👥',
-          },
-          {
-            name: '💼 Business',
-            description: 'Align design with business strategy and demonstrate impact',
-            skills: filterSkills(raw.business),
-            color: CATEGORY_COLORS.business,
-            icon: '💼',
-          },
-        ];
-
-        const activeCategory = categories[activeCategoryIndex];
-
-        if (!activeCategory || !activeCategory.skills) {
-          return null;
-        }
-
+      {activeTab === 'skill-tree' && skillTreeCategories && (() => {
+        const activeCategory = skillTreeCategories[activeCategoryIndex];
+        if (!activeCategory?.skills) return null;
         return (
           <div className="relative w-full min-h-[calc(100vh-80px)]">
-            {/* Navigation */}
             <SkillTreeNavigation
-              categories={categories}
+              categories={skillTreeCategories}
               activeIndex={activeCategoryIndex}
               onCategoryChange={setActiveCategoryIndex}
             />
-
-            {/* Active Category Content */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeCategoryIndex}

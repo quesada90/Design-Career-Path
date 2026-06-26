@@ -2,6 +2,7 @@ import { getSupabaseClient } from '../../../src/lib/supabase';
 import SharedDashboard from './shared-dashboard';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import type { SkillProficiency } from '../../../src/app/data/skills-data';
 
 interface SharedPageProps {
   params: Promise<{
@@ -59,35 +60,26 @@ export default async function SharedPage({ params }: SharedPageProps) {
     );
   }
 
-  // 2. Fetch designer's data from relational tables
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', shareLink.profile_id)
-    .single();
-
-  const { data: profs } = await supabase
-    .from('skill_proficiencies')
-    .select('skill_id, proficiency_level')
-    .eq('profile_id', shareLink.profile_id);
-
-  const { data: targets } = await supabase
-    .from('target_skills')
-    .select('skill_id')
-    .eq('profile_id', shareLink.profile_id);
-
-  const { data: tasks } = await supabase
-    .from('quest_tasks')
-    .select('*')
-    .eq('profile_id', shareLink.profile_id);
+  // 2. Fetch all designer data in parallel (profile_id is known, safe to batch)
+  const [
+    { data: profile },
+    { data: profs },
+    { data: targets },
+    { data: tasks },
+  ] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', shareLink.profile_id).single(),
+    supabase.from('skill_proficiencies').select('skill_id, proficiency_level').eq('profile_id', shareLink.profile_id),
+    supabase.from('target_skills').select('skill_id').eq('profile_id', shareLink.profile_id),
+    supabase.from('quest_tasks').select('*').eq('profile_id', shareLink.profile_id),
+  ]);
 
   // Convert array datasets into standard mapped objects for hydration
-  const skillProficiencies: Record<string, any> = {};
-  profs?.forEach((p: any) => {
-    skillProficiencies[p.skill_id] = p.proficiency_level;
+  const skillProficiencies: Record<string, SkillProficiency> = {};
+  profs?.forEach((p) => {
+    skillProficiencies[p.skill_id] = p.proficiency_level as SkillProficiency;
   });
 
-  const targetSkillIds = targets?.map((t: any) => t.skill_id) || [];
+  const targetSkillIds = targets?.map((t) => t.skill_id) ?? [];
 
   return (
     <SharedDashboard

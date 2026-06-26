@@ -3,7 +3,6 @@ import { ClerkProvider } from '@clerk/nextjs';
 import '../src/styles/globals.css';
 import '../src/styles/tailwind.css';
 import '../src/styles/theme.css';
-import '../src/styles/fonts.css';
 
 export const metadata: Metadata = {
   title: 'Design Career Path',

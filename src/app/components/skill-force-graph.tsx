@@ -152,7 +152,10 @@ export function SkillForceGraph({
       }
     });
     previousProficienciesRef.current = { ...skillProficiencies };
-  }, [skillProficiencies]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Only re-run when proficiencies change — helper fns (getNodeColor, emitParticles)
+  // are stable callbacks and don't need to be in deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skillProficiencies]);
 
   // Detect role level changes and emit particles for newly unlocked skills
   useEffect(() => {
@@ -171,7 +174,9 @@ export function SkillForceGraph({
       });
     }
     previousRoleLevelRef.current = currentRoleLevel;
-  }, [currentRoleLevel]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Only re-run when role level changes — skills array and emitParticles are stable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRoleLevel]);
 
   // Particle animation loop
   useEffect(() => {
@@ -512,6 +517,7 @@ export function SkillForceGraph({
             <Search className="w-4 h-4 text-gray-400" />
             <input
               type="text"
+              aria-label="Search skills"
               placeholder="Search skills..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

@@ -419,6 +419,8 @@ export function ArchetypeSelectorModal({
         setAllocation(null);
       }
     }
+  // Intentionally only re-run when the modal opens — other deps are stable props
+  // that don't need to re-trigger a reset mid-session.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 

@@ -30,9 +30,10 @@ import {
   type Skill,
   type SkillProficiency,
 } from './data/skills-data';
-import type { QuestTargets, QuestTarget, QuestTask } from './types/quest-log';
+import type { QuestTargets, QuestTarget, QuestTask, MeasurableType } from './types/quest-log';
 import { createNewTask, generateTaskId } from './types/quest-log';
 import type { TimeAllocation } from './data/time-allocation-data';
+import type { DbQuestTask } from './types/database';
 import {
   fetchProfile,
   updateProfile,
@@ -121,7 +122,7 @@ export default function App() {
         
         // Map database tasks back to questTargets structure
         const mappedTargets: QuestTargets = {};
-        dbTasks.forEach((t: any) => {
+        dbTasks.forEach((t: DbQuestTask) => {
           const targetId = t.target_id;
           if (!mappedTargets[targetId]) {
             let targetName = '';
@@ -149,7 +150,7 @@ export default function App() {
           mappedTargets[targetId].tasks.push({
             id: t.id,
             name: t.name,
-            measurableType: t.measurable_type as any,
+            measurableType: t.measurable_type as MeasurableType,
             measurableValue: t.measurable_value,
             deadline: t.deadline,
             completed: t.completed
@@ -217,7 +218,7 @@ export default function App() {
         archetype: result.archetype,
         current_role_id: result.currentRoleId || null,
         target_role_ids: [],
-        custom_time_allocations: result.customTimeAllocations as any,
+        custom_time_allocations: result.customTimeAllocations,
         excluded_skill_ids: updatedExcludedSkills
       });
 

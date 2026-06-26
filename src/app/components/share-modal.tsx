@@ -8,15 +8,9 @@ import {
   toggleShareLinkStatus,
   deleteShareLink,
 } from '../actions';
+import type { DbSharedLink } from '../types/database';
 
-interface ShareLink {
-  id: string;
-  token: string;
-  label: string;
-  active: boolean;
-  expires_at: string | null;
-  created_at: string;
-}
+type ShareLink = DbSharedLink;
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -36,7 +30,7 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
     try {
       setFetching(true);
       const data = await fetchShareLinks();
-      setLinks(data as any);
+      setLinks(data as ShareLink[]);
     } catch (err) {
       console.error('Failed to fetch share links:', err);
     } finally {

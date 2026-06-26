@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { motion } from 'motion/react';
 import { X, Lock, BookOpen, Briefcase, Award, Target } from 'lucide-react';
 import type { Skill, SkillProficiency } from '../data/skills-data';
@@ -15,7 +16,7 @@ interface SkillModalProps {
   readOnly?: boolean;
 }
 
-const proficiencyLevels: { value: SkillProficiency; label: string; icon: any; color: string; description: string }[] = [
+const proficiencyLevels: { value: SkillProficiency; label: string; icon: ComponentType<{ className?: string }>; color: string; description: string }[] = [
   {
     value: 'know',
     label: 'Know',

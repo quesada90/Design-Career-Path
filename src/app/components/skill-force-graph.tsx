@@ -49,6 +49,12 @@ interface GraphLink {
   target: string;
 }
 
+// After force-graph resolves links, source/target become node objects
+interface ResolvedGraphLink {
+  source: GraphNode | string;
+  target: GraphNode | string;
+}
+
 interface Particle {
   x: number;
   y: number;
@@ -70,6 +76,8 @@ export function SkillForceGraph({
   categoryDescription,
   color,
 }: SkillForceGraphProps) {
+  // react-force-graph-2d doesn't export a ref type — any is the intended workaround
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const graphRef = useRef<any>(null);
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -302,8 +310,9 @@ export function SkillForceGraph({
     const isHighlighted = hoveredNode?.id === node.id;
     const isConnected = hoveredNode && graphData.links.some(
       link => {
-        const sourceId = typeof link.source === 'object' ? (link.source as any).id : link.source;
-        const targetId = typeof link.target === 'object' ? (link.target as any).id : link.target;
+        const resolved = link as unknown as ResolvedGraphLink;
+        const sourceId = typeof resolved.source === 'object' ? resolved.source.id : resolved.source;
+        const targetId = typeof resolved.target === 'object' ? resolved.target.id : resolved.target;
         return (
           (sourceId === hoveredNode.id && targetId === node.id) ||
           (targetId === hoveredNode.id && sourceId === node.id)
@@ -539,6 +548,8 @@ export function SkillForceGraph({
         {/* Force Graph */}
         <ForceGraph2D
           ref={graphRef}
+          // react-force-graph-2d's generic NodeObject doesn't align with our typed GraphNode — cast required
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           graphData={filteredData as any}
           width={dimensions.width}
           height={dimensions.height}

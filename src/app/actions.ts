@@ -4,6 +4,8 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { supabaseAdmin as supabase } from '../lib/supabase';
 import { revalidatePath } from 'next/cache';
 import type { QuestTask } from './types/quest-log';
+import type { SkillProficiency } from './data/skills-data';
+import type { TimeAllocation } from './data/time-allocation-data';
 
 // Helper to secure user routes and retrieve active Clerk ID
 async function requireAuth() {
@@ -67,7 +69,7 @@ interface UpdateProfileInput {
   archetype?: string | null;
   current_role_id?: string | null;
   target_role_ids?: string[];
-  custom_time_allocations?: Record<string, number>;
+  custom_time_allocations?: Record<string, TimeAllocation>;
   excluded_skill_ids?: string[];
 }
 
@@ -110,7 +112,7 @@ export async function fetchSkillProficiencies() {
   // Convert array back into local record shape: Record<skillId, proficiencyLevel>
   const proficiencies: Record<string, 'locked' | 'know' | 'experience' | 'master'> = {};
   data.forEach((p) => {
-    proficiencies[p.skill_id] = p.proficiency_level as any;
+    proficiencies[p.skill_id] = p.proficiency_level as SkillProficiency;
   });
 
   return proficiencies;

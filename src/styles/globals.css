@@ -1,3 +1,26 @@
+@reference "tailwindcss";
+
 html, body {
-  background-color: #020617; /* slate-950 — matches the start of the app gradient */
+  background-color: var(--app-canvas-bg); /* slate-950 — matches the app canvas background */
+}
+
+@layer components {
+  /* Primary gradient button — used across all CTAs */
+  .btn-primary {
+    @apply px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600
+           hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg
+           transition-all duration-200 font-medium text-sm cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Ghost button — secondary/cancel actions */
+  .btn-ghost {
+    @apply px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-700/50
+           rounded-lg transition-all duration-200 text-sm cursor-pointer;
+  }
+
+  /* Standard dark modal panel */
+  .modal-panel {
+    @apply bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl;
+  }
 }

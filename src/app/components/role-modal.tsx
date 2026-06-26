@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { X, Circle, Target, CheckCircle2, ExternalLink, BookOpen, Briefcase, Award } from 'lucide-react';
 import { getRoleState, canSetAsTarget } from '../utils/career-path-logic';
 import { CATEGORY_META, getDefaultAllocation, type TimeAllocation } from '../data/time-allocation-data';
+import { ModalBackdrop } from './ui/modal-backdrop';
 
 function TimeAllocationBar({
   level,
@@ -206,21 +207,9 @@ export function RoleModal({
   }, [skills, skillProficiencies, targetSkillIds, availableSkillIds]);
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
+    <ModalBackdrop isOpen={isOpen} onClose={onClose}>
           <motion.div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-
-          {/* Modal */}
-          <motion.div
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] md:w-full max-w-2xl max-h-[90vh] bg-slate-900 rounded-2xl shadow-2xl z-50 overflow-hidden mx-2"
+            className="modal-panel w-[95vw] md:w-full max-w-2xl max-h-[90vh] overflow-hidden"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -380,7 +369,7 @@ export function RoleModal({
                     ) : (
                       <button
                         onClick={() => onSetCurrentRole(roleId)}
-                        className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-lg transition-all shadow-lg cursor-pointer"
+                        className="btn-primary flex items-center justify-center gap-2 py-3 w-full"
                       >
                         <Circle className="w-4 h-4" />
                         <span>Set as Current Role</span>
@@ -416,8 +405,6 @@ export function RoleModal({
               )}
             </div>
           </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+    </ModalBackdrop>
   );
 }

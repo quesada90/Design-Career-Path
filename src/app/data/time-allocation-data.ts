@@ -29,11 +29,13 @@ export const MGMT_ALLOCATION: Record<number, TimeAllocation> = {
   7: { craft: 0,  communication: 30, leadership: 45, business: 25 },
 };
 
+import { CATEGORY_COLORS } from '../config/tokens';
+
 export const CATEGORY_META: { key: keyof TimeAllocation; label: string; color: string }[] = [
-  { key: 'craft',         label: 'Craft',        color: '#06b6d4' },
-  { key: 'communication', label: 'Communication', color: '#ec4899' },
-  { key: 'leadership',    label: 'Leadership',    color: '#a855f7' },
-  { key: 'business',      label: 'Business',      color: '#3b82f6' },
+  { key: 'craft',         label: 'Craft',        color: CATEGORY_COLORS.craft },
+  { key: 'communication', label: 'Communication', color: CATEGORY_COLORS.communication },
+  { key: 'leadership',    label: 'Leadership',    color: CATEGORY_COLORS.leadership },
+  { key: 'business',      label: 'Business',      color: CATEGORY_COLORS.business },
 ];
 
 export function getDefaultAllocation(level: number, track: string): TimeAllocation {

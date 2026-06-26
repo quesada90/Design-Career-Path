@@ -1,6 +1,8 @@
-import { motion, AnimatePresence } from 'motion/react';
+import type { ComponentType } from 'react';
+import { motion } from 'motion/react';
 import { X, Lock, BookOpen, Briefcase, Award, Target } from 'lucide-react';
 import type { Skill, SkillProficiency } from '../data/skills-data';
+import { ModalBackdrop } from './ui/modal-backdrop';
 
 interface SkillModalProps {
   isOpen: boolean;
@@ -14,7 +16,7 @@ interface SkillModalProps {
   readOnly?: boolean;
 }
 
-const proficiencyLevels: { value: SkillProficiency; label: string; icon: any; color: string; description: string }[] = [
+const proficiencyLevels: { value: SkillProficiency; label: string; icon: ComponentType<{ className?: string }>; color: string; description: string }[] = [
   {
     value: 'know',
     label: 'Know',
@@ -63,27 +65,13 @@ export function SkillModal({
   const isTargeted = targetSkillIds.includes(skill.id);
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-
-          {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <ModalBackdrop isOpen={isOpen} onClose={onClose}>
             <motion.div
-              className="bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-800"
+              className="modal-panel max-w-2xl w-full"
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', duration: 0.5 }}
-              onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="relative px-8 py-6 border-b border-slate-800">
@@ -272,15 +260,12 @@ export function SkillModal({
               <div className="px-8 py-4 border-t border-slate-800 flex justify-end">
                 <button
                   onClick={onClose}
-                  className="px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg transition-all duration-300 font-medium shadow-lg"
+                  className="btn-primary px-6 py-2"
                 >
                   Done
                 </button>
               </div>
             </motion.div>
-          </div>
-        </>
-      )}
-    </AnimatePresence>
+    </ModalBackdrop>
   );
 }

@@ -3,6 +3,21 @@ import ForceGraph2D from 'react-force-graph-2d';
 import { motion, AnimatePresence } from 'motion/react';
 import { ZoomIn, ZoomOut, Maximize2, Search } from 'lucide-react';
 import type { Skill, SkillProficiency } from '../data/skills-data';
+import {
+  CATEGORY_COLORS,
+  SKILL_NODE_COLORS,
+  CANVAS_BG,
+  CANVAS_TEXT_COLOR,
+  LINK_COLOR_BASE,
+  LINK_COLOR_TARGET,
+  PARTICLE_SPEED_MIN,
+  PARTICLE_SPEED_MAX,
+  PARTICLE_LIFE_MIN,
+  PARTICLE_LIFE_MAX,
+  PARTICLE_SIZE_MIN,
+  PARTICLE_SIZE_MAX,
+  PARTICLE_EMIT_COUNT,
+} from '../config/tokens';
 
 interface SkillForceGraphProps {
   skills: Skill[];
@@ -34,6 +49,12 @@ interface GraphLink {
   target: string;
 }
 
+// After force-graph resolves links, source/target become node objects
+interface ResolvedGraphLink {
+  source: GraphNode | string;
+  target: GraphNode | string;
+}
+
 interface Particle {
   x: number;
   y: number;
@@ -55,6 +76,8 @@ export function SkillForceGraph({
   categoryDescription,
   color,
 }: SkillForceGraphProps) {
+  // react-force-graph-2d doesn't export a ref type — any is the intended workaround
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const graphRef = useRef<any>(null);
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,16 +101,16 @@ export function SkillForceGraph({
     const newParticles: Particle[] = [];
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count;
-      const speed = 0.5 + Math.random() * 1.5;
+      const speed = PARTICLE_SPEED_MIN + Math.random() * (PARTICLE_SPEED_MAX - PARTICLE_SPEED_MIN);
       newParticles.push({
         x: node.x!,
         y: node.y!,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 1,
-        maxLife: 60 + Math.random() * 30,
+        maxLife: PARTICLE_LIFE_MIN + Math.random() * (PARTICLE_LIFE_MAX - PARTICLE_LIFE_MIN),
         color: particleColor,
-        size: 2 + Math.random() * 2,
+        size: PARTICLE_SIZE_MIN + Math.random() * (PARTICLE_SIZE_MAX - PARTICLE_SIZE_MIN),
       });
     }
     particlesRef.current = [...particlesRef.current, ...newParticles];
@@ -129,7 +152,10 @@ export function SkillForceGraph({
       }
     });
     previousProficienciesRef.current = { ...skillProficiencies };
-  }, [skillProficiencies]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Only re-run when proficiencies change — helper fns (getNodeColor, emitParticles)
+  // are stable callbacks and don't need to be in deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skillProficiencies]);
 
   // Detect role level changes and emit particles for newly unlocked skills
   useEffect(() => {
@@ -142,13 +168,15 @@ export function SkillForceGraph({
         if (wasLocked && isNowUnlocked && graphData.nodes.length > 0) {
           const node = graphData.nodes.find(n => n.id === skill.id);
           if (node && node.x !== undefined && node.y !== undefined) {
-            emitParticles(node, '#06b6d4', 20);
+            emitParticles(node, CATEGORY_COLORS.craft, PARTICLE_EMIT_COUNT);
           }
         }
       });
     }
     previousRoleLevelRef.current = currentRoleLevel;
-  }, [currentRoleLevel]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Only re-run when role level changes — skills array and emitParticles are stable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRoleLevel]);
 
   // Particle animation loop
   useEffect(() => {
@@ -213,14 +241,14 @@ export function SkillForceGraph({
 
   // Node color based on proficiency state
   const getNodeColor = (node: GraphNode) => {
-    if (!node.isUnlocked) return '#475569'; // Grey for locked
-    if (node.isTarget && node.proficiency === 'locked') return '#f97316'; // Orange for targets
+    if (!node.isUnlocked) return SKILL_NODE_COLORS.locked;
+    if (node.isTarget && node.proficiency === 'locked') return SKILL_NODE_COLORS.target;
 
     switch (node.proficiency) {
-      case 'know': return '#3b82f6'; // Blue
-      case 'experience': return '#a855f7'; // Purple
-      case 'master': return '#eab308'; // Yellow
-      default: return '#06b6d4'; // Cyan for unlocked
+      case 'know':       return SKILL_NODE_COLORS.know;
+      case 'experience': return SKILL_NODE_COLORS.experience;
+      case 'master':     return SKILL_NODE_COLORS.master;
+      default:           return CATEGORY_COLORS.craft; // Cyan for unlocked
     }
   };
 
@@ -287,8 +315,9 @@ export function SkillForceGraph({
     const isHighlighted = hoveredNode?.id === node.id;
     const isConnected = hoveredNode && graphData.links.some(
       link => {
-        const sourceId = typeof link.source === 'object' ? (link.source as any).id : link.source;
-        const targetId = typeof link.target === 'object' ? (link.target as any).id : link.target;
+        const resolved = link as unknown as ResolvedGraphLink;
+        const sourceId = typeof resolved.source === 'object' ? resolved.source.id : resolved.source;
+        const targetId = typeof resolved.target === 'object' ? resolved.target.id : resolved.target;
         return (
           (sourceId === hoveredNode.id && targetId === node.id) ||
           (targetId === hoveredNode.id && sourceId === node.id)
@@ -319,7 +348,7 @@ export function SkillForceGraph({
     ctx.fill();
 
     // Border
-    ctx.strokeStyle = isHighlighted ? '#ffffff' : nodeColor;
+    ctx.strokeStyle = isHighlighted ? CANVAS_TEXT_COLOR : nodeColor;
     ctx.lineWidth = isHighlighted ? 2 : 1;
     if (node.isTarget) {
       ctx.setLineDash([2, 2]);
@@ -332,7 +361,7 @@ export function SkillForceGraph({
     ctx.font = `${12 / globalScale}px Sans-Serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = CANVAS_TEXT_COLOR;
     ctx.fillText(node.name, node.x!, node.y! + size + 4);
 
     // Restore context state
@@ -364,7 +393,9 @@ export function SkillForceGraph({
     ctx.beginPath();
     ctx.moveTo(link.source.x || 0, link.source.y || 0);
     ctx.lineTo(link.target.x || 0, link.target.y || 0);
-    ctx.strokeStyle = isUnlocked ? `rgba(71, 85, 105, ${opacity})` : `rgba(51, 65, 85, ${opacity})`;
+    ctx.strokeStyle = isUnlocked
+      ? `${LINK_COLOR_BASE} ${opacity})`
+      : `${LINK_COLOR_TARGET} ${opacity})`;
     ctx.lineWidth = width;
     if (!isUnlocked) {
       ctx.setLineDash([4, 4]);
@@ -486,6 +517,7 @@ export function SkillForceGraph({
             <Search className="w-4 h-4 text-gray-400" />
             <input
               type="text"
+              aria-label="Search skills"
               placeholder="Search skills..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -522,10 +554,12 @@ export function SkillForceGraph({
         {/* Force Graph */}
         <ForceGraph2D
           ref={graphRef}
+          // react-force-graph-2d's generic NodeObject doesn't align with our typed GraphNode — cast required
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           graphData={filteredData as any}
           width={dimensions.width}
           height={dimensions.height}
-          backgroundColor="#0f172a"
+          backgroundColor={CANVAS_BG}
           nodeCanvasObject={paintNode}
           linkCanvasObject={paintLink}
           nodeLabel={() => ''} // Disable built-in tooltip

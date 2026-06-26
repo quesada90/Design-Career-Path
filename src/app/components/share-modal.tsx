@@ -1,21 +1,16 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { Share2, Copy, Check, Trash2, Calendar, Link, X, ExternalLink, ShieldCheck, Clock } from 'lucide-react';
+import { ModalBackdrop } from './ui/modal-backdrop';
 import {
   fetchShareLinks,
   generateShareLink,
   toggleShareLinkStatus,
   deleteShareLink,
 } from '../actions';
+import type { DbSharedLink } from '../types/database';
 
-interface ShareLink {
-  id: string;
-  token: string;
-  label: string;
-  active: boolean;
-  expires_at: string | null;
-  created_at: string;
-}
+type ShareLink = DbSharedLink;
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -35,7 +30,7 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
     try {
       setFetching(true);
       const data = await fetchShareLinks();
-      setLinks(data as any);
+      setLinks(data as ShareLink[]);
     } catch (err) {
       console.error('Failed to fetch share links:', err);
     } finally {
@@ -104,22 +99,9 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            className="fixed inset-0 bg-black/60 backdrop-blur-md z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-
-          {/* Modal Wrapper */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <ModalBackdrop isOpen={isOpen} onClose={onClose} className="overflow-y-auto w-full flex items-center justify-center">
             <motion.div
-              className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden backdrop-blur-xl"
+              className="modal-panel max-w-2xl w-full overflow-hidden backdrop-blur-xl"
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -345,9 +327,6 @@ export function ShareModal({ isOpen, onClose }: ShareModalProps) {
                 </div>
               </div>
             </motion.div>
-          </div>
-        </>
-      )}
-    </AnimatePresence>
+    </ModalBackdrop>
   );
 }

@@ -1,4 +1,5 @@
 import { levelYPositions } from '../config/career-levels';
+import { LEVEL_COLORS } from '../config/tokens';
 
 export interface CareerRole {
   id: string;
@@ -14,18 +15,8 @@ export interface CareerRole {
   connections: string[];
 }
 
-// Color scheme based on level (bottom to top)
-const levelColors = {
-  0: '#60A5FA', // Soft blue
-  1: '#34D399', // Green
-  2: '#A3E635', // Green yellow
-  3: '#FDE047', // Yellow
-  4: '#FB923C', // Yellow orange
-  5: '#F97316', // Orange
-  6: '#EF4444', // Red
-  7: '#EC4899', // Purple red
-  8: '#A855F7', // Purple
-};
+// Color scheme based on level — imported from centralized tokens
+const levelColors = LEVEL_COLORS;
 
 // Y positions imported from centralized config
 // Now managed in /src/app/config/career-levels.ts

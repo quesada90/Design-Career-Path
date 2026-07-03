@@ -80,11 +80,11 @@ export function CareerNode({
         top: `calc(${y}% - 8px)`,
       }}
       onClick={onClick}
-      whileHover={{ scale: 1.2 }}
+      whileHover={{ scale: 1.2, transition: { duration: 0.1 } }}
       whileTap={{ scale: 0.95 }}
       initial={{ opacity: 0, scale: 0 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, delay: level * 0.1 }}
+      transition={{ duration: 0.25, delay: level * 0.05 }}
     >
       {/* Glow effect - stronger for current role */}
       {roleState === 'current' && (
@@ -135,7 +135,7 @@ export function CareerNode({
         style={{ color }}
         initial={{ opacity: 0, x: isICTrack ? 10 : -10 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: level * 0.1 + 0.2 }}
+        transition={{ delay: level * 0.05 + 0.1 }}
       >
         {title}
       </motion.div>

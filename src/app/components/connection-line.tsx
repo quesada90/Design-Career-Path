@@ -36,12 +36,11 @@ export function ConnectionLine({
       d={path}
       stroke={color}
       strokeWidth={isHighlighted ? 3 : 2}
-      strokeDasharray="6 4"
+      vectorEffect="non-scaling-stroke"
       fill="none"
-      opacity={isHighlighted ? 1 : 0.4}
-      initial={{ pathLength: 0, opacity: 0 }}
-      animate={{ pathLength: 1, opacity: isHighlighted ? 1 : 0.4 }}
-      transition={{ duration: 0.8, ease: "easeInOut" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: isHighlighted ? 1 : 0.4 }}
+      transition={{ duration: 0.4, ease: "easeInOut" }}
       className="transition-all duration-300"
     />
   );

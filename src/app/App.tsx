@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Share2, Loader2 } from 'lucide-react';
 import { CATEGORY_COLORS } from './config/tokens';
@@ -54,9 +54,15 @@ export default function App() {
   const [selectedRole, setSelectedRole] = useState<CareerRole | null>(null);
   const [hoveredRoleId, setHoveredRoleId] = useState<string | null>(null);
   const [hoveredTrack, setHoveredTrack] = useState<string | null>(null);
-  const [containerSize, setContainerSize] = useState({ width: 800, height: 1000 });
-  const containerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('career-path');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   // Skill Tree Navigation State
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
@@ -342,23 +348,6 @@ export default function App() {
     ];
   }, [designArchetype, excludedSkillIds, roleColor]);
 
-  // Update container size on mount and resize
-  useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const { width, height } = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width, height });
-      }
-    };
-
-    updateSize();
-    const timeoutId = setTimeout(updateSize, 100); // Delay for initial render
-    window.addEventListener('resize', updateSize);
-    return () => {
-      window.removeEventListener('resize', updateSize);
-      clearTimeout(timeoutId);
-    };
-  }, []);
 
   const handleNodeClick = useCallback((role: CareerRole) => {
     setSelectedRole(role);
@@ -737,8 +726,8 @@ export default function App() {
       {activeTab === 'career-path' && (
         <div className="relative w-full py-6 md:py-12 overflow-x-hidden">
           {/* Career Path Diagram Container - with padding for sidebars */}
-          <div className="relative w-full px-24 md:px-40 overflow-x-auto">
-            <div className="relative w-full min-w-[600px] max-w-5xl mx-auto">
+          <div className="relative w-full md:px-40">
+            <div className="relative w-[calc(100vw-32px)] md:w-full md:min-w-[600px] max-w-5xl mx-auto">
               
               {/* Track Labels - At Top */}
               <div className="grid grid-cols-2 gap-8 mb-3 md:mb-4 px-4 md:px-8 max-w-2xl mx-auto">
@@ -805,25 +794,26 @@ export default function App() {
 
               {/* Diagram Area - Portrait Orientation */}
               <div className="relative">
-                {/* Left Sidebar - Absolute positioning */}
-                <div className="absolute left-0 top-0 bottom-0 -ml-24 md:-ml-36">
+                {/* Left Sidebar - hidden on mobile */}
+                <div className="hidden md:block absolute left-0 top-0 bottom-0 md:-ml-36">
                   <SidebarLabels position="left" />
                 </div>
 
-                {/* Right Sidebar - Absolute positioning */}
-                <div className="absolute right-0 top-0 bottom-0 -mr-24 md:-mr-36">
+                {/* Right Sidebar - hidden on mobile */}
+                <div className="hidden md:block absolute right-0 top-0 bottom-0 md:-mr-36">
                   <SidebarLabels position="right" />
                 </div>
 
                 {/* Main Diagram */}
                 <div
-                  ref={containerRef}
                   className="relative w-full aspect-[3/4] md:aspect-[4/5] bg-slate-900/30 rounded-2xl border border-slate-800/50 backdrop-blur-sm overflow-visible mx-auto"
                 >
                   {/* SVG for Connection Lines */}
                   <svg
-                     className="absolute inset-0 w-full h-full pointer-events-none"
-                     style={{ zIndex: 1 }}
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    style={{ zIndex: 1 }}
                   >
                     {connections.map((conn, idx) => {
                       const isHighlighted =
@@ -832,18 +822,18 @@ export default function App() {
                         selectedRole?.id === conn.from.id ||
                         selectedRole?.id === conn.to.id;
 
-                      const fromX = (conn.from.x / 100) * containerSize.width;
-                      const fromY = (conn.from.y / 100) * containerSize.height;
-                      const toX = (conn.to.x / 100) * containerSize.width;
-                      const toY = (conn.to.y / 100) * containerSize.height;
+                      const resolveX = (role: CareerRole) =>
+                        isMobile && role.track === 'ic' ? 35
+                        : isMobile && role.track === 'management' ? 65
+                        : role.x;
 
                       return (
                         <ConnectionLine
                           key={idx}
-                          fromX={fromX}
-                          fromY={fromY}
-                          toX={toX}
-                          toY={toY}
+                          fromX={resolveX(conn.from)}
+                          fromY={conn.from.y}
+                          toX={resolveX(conn.to)}
+                          toY={conn.to.y}
                           color={conn.color}
                           isHighlighted={isHighlighted}
                         />
@@ -855,7 +845,11 @@ export default function App() {
                   <div className="absolute inset-0" style={{ zIndex: 2 }}>
                     {careerRoles.map((role) => {
                       const roleState = getRoleState(role.id, currentRoleId, targetRoleIds);
-                      
+                      const x =
+                        isMobile && role.track === 'ic' ? 35
+                        : isMobile && role.track === 'management' ? 65
+                        : role.x;
+
                       return (
                         <div
                           key={role.id}
@@ -864,6 +858,7 @@ export default function App() {
                         >
                           <CareerNode
                             {...role}
+                            x={x}
                             onClick={() => handleNodeClick(role)}
                             isActive={
                               selectedRole?.id === role.id ||

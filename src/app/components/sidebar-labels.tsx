@@ -47,9 +47,7 @@ export function SidebarLabels({ position }: SidebarLabelsProps) {
     <div className="relative h-full w-24 md:w-36">
       {/* Vertical Title */}
       <div
-        className={`absolute top-1/2 -translate-y-1/2 ${
-          position === 'left' ? 'left-0' : 'left-0'
-        }`}
+        className={`absolute top-1/2 ${position === 'left' ? 'left-0' : 'right-0'}`}
         style={{
           writingMode: 'vertical-lr',
           textOrientation: 'mixed',
@@ -66,7 +64,7 @@ export function SidebarLabels({ position }: SidebarLabelsProps) {
         <motion.div
           key={label.level}
           className={`absolute flex items-center gap-2 ${
-            position === 'left' ? 'flex-row left-8 md:left-10' : 'flex-row right-8 md:right-10'
+            position === 'left' ? 'flex-row left-8 md:left-10' : 'flex-row left-8 md:left-10'
           }`}
           style={{ 
             top: `${label.y}%`, 

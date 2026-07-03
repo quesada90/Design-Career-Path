@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Printer, Shield, ExternalLink } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { CareerNode } from '../../../src/app/components/career-node';
-import { ConnectionLine } from '../../../src/app/components/connection-line';
+import { ConnectionLine, type ConnectionState } from '../../../src/app/components/connection-line';
 import { RoleModal } from '../../../src/app/components/role-modal';
 import { SidebarLabels } from '../../../src/app/components/sidebar-labels';
 import { SkillTreeNavigation } from '../../../src/app/components/skill-tree-navigation';
 import { SkillModal } from '../../../src/app/components/skill-modal';
 import { QuestLog } from '../../../src/app/components/quest-log';
 import { careerRoles, type CareerRole } from '../../../src/app/components/career-data';
-import { getRoleState } from '../../../src/app/utils/career-path-logic';
+import { getRoleState, getCompletedRoles, getPathEdgesToCurrent } from '../../../src/app/utils/career-path-logic';
 
 const SkillForceGraph = dynamic(
   () => import('../../../src/app/components/skill-force-graph').then((mod) => mod.SkillForceGraph),
@@ -55,8 +55,6 @@ export default function SharedDashboard({
   const [selectedRole, setSelectedRole] = useState<CareerRole | null>(null);
   const [hoveredRoleId, setHoveredRoleId] = useState<string | null>(null);
   const [hoveredTrack, setHoveredTrack] = useState<string | null>(null);
-  const [containerSize, setContainerSize] = useState({ width: 800, height: 1000 });
-  const containerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('career-path');
 
   // Skill Tree Navigation State
@@ -123,23 +121,17 @@ export default function SharedDashboard({
   const currentRole = careerRoles.find((r) => r.id === currentRoleId);
   const roleColor = currentRole?.color || '#06b6d4'; // Default to cyan
 
-  // Update container size on mount and resize
-  useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        const { width, height } = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width, height });
-      }
-    };
+  const completedRoleIds = useMemo(
+    () => new Set([...getCompletedRoles(currentRoleId), ...(currentRoleId ? [currentRoleId] : [])]),
+    [currentRoleId]
+  );
 
-    updateSize();
-    const timeoutId = setTimeout(updateSize, 100);
-    window.addEventListener('resize', updateSize);
-    return () => {
-      window.removeEventListener('resize', updateSize);
-      clearTimeout(timeoutId);
-    };
-  }, []);
+  const futurePathEdges = useMemo(() => {
+    if (!hoveredRoleId) return null;
+    const state = getRoleState(hoveredRoleId, currentRoleId, targetRoleIds);
+    if (state !== 'future') return null;
+    return getPathEdgesToCurrent(hoveredRoleId, currentRoleId);
+  }, [hoveredRoleId, currentRoleId, targetRoleIds]);
 
   const handleNodeClick = (role: CareerRole) => {
     setSelectedRole(role);
@@ -323,35 +315,41 @@ export default function SharedDashboard({
 
                   {/* Main Diagram */}
                   <div
-                    ref={containerRef}
                     className="relative w-full aspect-[3/4] md:aspect-[4/5] bg-slate-900/30 rounded-2xl border border-slate-800/50 backdrop-blur-sm overflow-visible mx-auto"
                   >
                     {/* SVG for Connection Lines */}
                     <svg
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
                       className="absolute inset-0 w-full h-full pointer-events-none"
                       style={{ zIndex: 1 }}
                     >
                       {connections.map((conn, idx) => {
-                        const isHighlighted =
-                          hoveredRoleId === conn.from.id ||
-                          hoveredRoleId === conn.to.id ||
-                          selectedRole?.id === conn.from.id ||
-                          selectedRole?.id === conn.to.id;
+                        const edgeKey = `${conn.from.id}->${conn.to.id}`;
+                        const isCompletedEdge =
+                          completedRoleIds.has(conn.from.id) && completedRoleIds.has(conn.to.id);
 
-                        const fromX = (conn.from.x / 100) * containerSize.width;
-                        const fromY = (conn.from.y / 100) * containerSize.height;
-                        const toX = (conn.to.x / 100) * containerSize.width;
-                        const toY = (conn.to.y / 100) * containerSize.height;
+                        let connectionState: ConnectionState;
+                        if (isCompletedEdge) {
+                          connectionState = 'completed';
+                        } else if (hoveredRoleId) {
+                          const isOnPath = futurePathEdges?.has(edgeKey) ?? false;
+                          const isAdjacent = !futurePathEdges &&
+                            (hoveredRoleId === conn.from.id || hoveredRoleId === conn.to.id);
+                          connectionState = isOnPath || isAdjacent ? 'highlighted' : 'dim';
+                        } else {
+                          connectionState = 'default';
+                        }
 
                         return (
                           <ConnectionLine
                             key={idx}
-                            fromX={fromX}
-                            fromY={fromY}
-                            toX={toX}
-                            toY={toY}
+                            fromX={conn.from.x}
+                            fromY={conn.from.y}
+                            toX={conn.to.x}
+                            toY={conn.to.y}
                             color={conn.color}
-                            isHighlighted={isHighlighted}
+                            connectionState={connectionState}
                           />
                         );
                       })}

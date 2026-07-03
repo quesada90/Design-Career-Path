@@ -27,10 +27,8 @@ export function CareerNode({
   isActive = false,
   roleState,
 }: CareerNodeProps) {
-  // IC track shows text on left (text - dot)
   const isICTrack = track === 'ic';
-  
-  // Visual styles based on role state
+
   const getNodeStyles = () => {
     switch (roleState) {
       case 'completed':
@@ -44,7 +42,7 @@ export function CareerNode({
       case 'current':
         return {
           bg: '#ffffff',
-          border: '#ffffff',
+          border: `${color}80`,
           borderWidth: '4px',
           scale: 1.3,
           showIcon: null,
@@ -71,7 +69,8 @@ export function CareerNode({
   };
 
   const styles = getNodeStyles();
-  
+  const showHoverRing = isActive && roleState !== 'current';
+
   return (
     <motion.div
       className="absolute cursor-pointer group"
@@ -86,37 +85,17 @@ export function CareerNode({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.25, delay: level * 0.05 }}
     >
-      {/* Glow effect - stronger for current role */}
-      {roleState === 'current' && (
-        <motion.div
-          className="absolute inset-0 rounded-full blur-lg"
-          style={{ backgroundColor: '#ffffff' }}
-          animate={{ opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      )}
-      
-      <motion.div
-        className="absolute inset-0 rounded-full blur-md"
-        style={{ backgroundColor: roleState === 'current' ? '#ffffff' : color }}
-        initial={{ opacity: 0 }}
-        whileHover={{ opacity: 0.4 }}
-        animate={{ opacity: isActive ? 0.6 : 0 }}
-      />
-
       {/* Main node circle */}
       <div
-        className="relative w-4 h-4 md:w-5 md:h-5 rounded-full transition-all duration-300 flex items-center justify-center"
+        className="relative w-4 h-4 md:w-5 md:h-5 rounded-full transition-all duration-200 flex items-center justify-center"
         style={{
           backgroundColor: styles.bg,
-          borderColor: styles.border,
-          borderWidth: styles.borderWidth,
+          borderColor: showHoverRing ? `${color}80` : styles.border,
+          borderWidth: showHoverRing ? '4px' : styles.borderWidth,
           borderStyle: styles.borderStyle || 'solid',
           transform: `scale(${styles.scale})`,
-          boxShadow: roleState === 'current' ? '0 0 20px rgba(255,255,255,0.8)' : 'none',
         }}
       >
-        {/* Icons */}
         {styles.showIcon === 'check' && (
           <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-white" strokeWidth={3} />
         )}
@@ -128,8 +107,8 @@ export function CareerNode({
       {/* Title label */}
       <motion.div
         className={`absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-xs md:text-sm font-medium pointer-events-none ${
-          isICTrack 
-            ? 'right-full mr-3 md:mr-4' 
+          isICTrack
+            ? 'right-full mr-3 md:mr-4'
             : 'left-full ml-3 md:ml-4'
         }`}
         style={{ color }}

@@ -6,7 +6,7 @@ import { User, Share2, Loader2 } from 'lucide-react';
 import { CATEGORY_COLORS } from './config/tokens';
 import dynamic from 'next/dynamic';
 import { CareerNode } from './components/career-node';
-import { ConnectionLine } from './components/connection-line';
+import { ConnectionLine, type ConnectionState } from './components/connection-line';
 import { RoleModal } from './components/role-modal';
 import { SidebarLabels } from './components/sidebar-labels';
 import { ConfirmationModal } from './components/confirmation-modal';
@@ -17,7 +17,7 @@ import { QuestLog } from './components/quest-log';
 import { QuestCelebrationModal } from './components/quest-celebration-modal';
 import { ShareModal } from './components/share-modal';
 import { careerRoles, type CareerRole } from './components/career-data';
-import { getRoleState, canSetAsTarget, getAvailableTargets } from './utils/career-path-logic';
+import { getRoleState, canSetAsTarget, getAvailableTargets, getCompletedRoles, getPathEdgesToCurrent } from './utils/career-path-logic';
 
 const SkillForceGraph = dynamic(
   () => import('./components/skill-force-graph').then((mod) => mod.SkillForceGraph),
@@ -302,6 +302,20 @@ export default function App() {
     // Database toggle
     await toggleTargetSkill(skillId);
   };
+
+  // Completed roles set (includes current) for connection state computation
+  const completedRoleIds = useMemo(
+    () => new Set([...getCompletedRoles(currentRoleId), ...(currentRoleId ? [currentRoleId] : [])]),
+    [currentRoleId]
+  );
+
+  // Path edges from hovered future node back to current — recomputed only when hovered node changes
+  const futurePathEdges = useMemo(() => {
+    if (!hoveredRoleId) return null;
+    const state = getRoleState(hoveredRoleId, currentRoleId, targetRoleIds);
+    if (state !== 'future') return null;
+    return getPathEdgesToCurrent(hoveredRoleId, currentRoleId);
+  }, [hoveredRoleId, currentRoleId, targetRoleIds]);
 
   // Get current role level for skill unlocking
   const currentRoleLevel = getRoleLevelFromId(currentRoleId);
@@ -816,16 +830,28 @@ export default function App() {
                     style={{ zIndex: 1 }}
                   >
                     {connections.map((conn, idx) => {
-                      const isHighlighted =
-                        hoveredRoleId === conn.from.id ||
-                        hoveredRoleId === conn.to.id ||
-                        selectedRole?.id === conn.from.id ||
-                        selectedRole?.id === conn.to.id;
-
                       const resolveX = (role: CareerRole) =>
                         isMobile && role.track === 'ic' ? 35
                         : isMobile && role.track === 'management' ? 65
                         : role.x;
+
+                      const edgeKey = `${conn.from.id}->${conn.to.id}`;
+                      const isCompletedEdge =
+                        completedRoleIds.has(conn.from.id) && completedRoleIds.has(conn.to.id);
+
+                      let connectionState: ConnectionState;
+                      if (isCompletedEdge) {
+                        connectionState = 'completed';
+                      } else if (hoveredRoleId) {
+                        const isOnPath = futurePathEdges?.has(edgeKey) ?? false;
+                        // Only use adjacency when NOT in future-path mode — otherwise the forward
+                        // edge from the hovered node would also highlight
+                        const isAdjacent = !futurePathEdges &&
+                          (hoveredRoleId === conn.from.id || hoveredRoleId === conn.to.id);
+                        connectionState = isOnPath || isAdjacent ? 'highlighted' : 'dim';
+                      } else {
+                        connectionState = 'default';
+                      }
 
                       return (
                         <ConnectionLine
@@ -835,7 +861,7 @@ export default function App() {
                           toX={resolveX(conn.to)}
                           toY={conn.to.y}
                           color={conn.color}
-                          isHighlighted={isHighlighted}
+                          connectionState={connectionState}
                         />
                       );
                     })}

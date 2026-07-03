@@ -1,13 +1,22 @@
 import { motion } from 'motion/react';
 
+export type ConnectionState = 'completed' | 'highlighted' | 'dim' | 'default';
+
 interface ConnectionLineProps {
   fromX: number;
   fromY: number;
   toX: number;
   toY: number;
   color: string;
-  isHighlighted?: boolean;
+  connectionState: ConnectionState;
 }
+
+const stateStyles: Record<ConnectionState, { opacity: number; strokeWidth: number }> = {
+  completed:   { opacity: 1,    strokeWidth: 3   },
+  highlighted: { opacity: 0.9,  strokeWidth: 2.5 },
+  dim:         { opacity: 0.08, strokeWidth: 2   },
+  default:     { opacity: 0.4,  strokeWidth: 2   },
+};
 
 export function ConnectionLine({
   fromX,
@@ -15,33 +24,26 @@ export function ConnectionLine({
   toX,
   toY,
   color,
-  isHighlighted = false,
+  connectionState,
 }: ConnectionLineProps) {
-  // Calculate control points for a smooth curve
-  // For vertical orientation, we want curves that flow naturally upward/sideways
-  const deltaX = toX - fromX;
   const deltaY = toY - fromY;
-  const midY = (fromY + toY) / 2;
-  
-  // Use bezier curves for more natural flow
-  const controlPoint1X = fromX + deltaX * 0.2;
-  const controlPoint1Y = fromY;
-  const controlPoint2X = toX - deltaX * 0.2;
-  const controlPoint2Y = toY;
+  const controlPoint1X = fromX;
+  const controlPoint1Y = fromY + deltaY * 0.3;
+  const controlPoint2X = toX;
+  const controlPoint2Y = toY - deltaY * 0.3;
 
   const path = `M ${fromX} ${fromY} C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${toX} ${toY}`;
+  const { opacity, strokeWidth } = stateStyles[connectionState];
 
   return (
     <motion.path
       d={path}
       stroke={color}
-      strokeWidth={isHighlighted ? 3 : 2}
+      strokeWidth={strokeWidth}
       vectorEffect="non-scaling-stroke"
       fill="none"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: isHighlighted ? 1 : 0.4 }}
-      transition={{ duration: 0.4, ease: "easeInOut" }}
-      className="transition-all duration-300"
+      animate={{ opacity }}
+      transition={{ duration: 0.2 }}
     />
   );
 }

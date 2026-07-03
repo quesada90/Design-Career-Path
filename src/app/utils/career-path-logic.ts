@@ -110,6 +110,34 @@ export function getRoleById(roleId: string): CareerRole | undefined {
 }
 
 /**
+ * Get all edge keys ("fromId->toId") on the exact path from a future node back to current.
+ * Used to highlight the full route when hovering a future node.
+ */
+export function getPathEdgesToCurrent(
+  futureRoleId: string,
+  currentRoleId: string | null
+): Set<string> {
+  if (!currentRoleId) return new Set();
+  const reverseMap = buildReverseConnectionMap();
+  const pathEdges = new Set<string>();
+  const queue = [futureRoleId];
+  const visited = new Set<string>();
+
+  while (queue.length > 0) {
+    const roleId = queue.shift()!;
+    if (visited.has(roleId) || roleId === currentRoleId) continue;
+    visited.add(roleId);
+
+    const parents = reverseMap.get(roleId) || [];
+    parents.forEach((parentId) => {
+      pathEdges.add(`${parentId}->${roleId}`);
+      queue.push(parentId);
+    });
+  }
+  return pathEdges;
+}
+
+/**
  * Validate if a role can be set as target
  */
 export function canSetAsTarget(

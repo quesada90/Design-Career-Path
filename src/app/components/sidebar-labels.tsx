@@ -47,14 +47,20 @@ export function SidebarLabels({ position }: SidebarLabelsProps) {
     <div className="relative h-full w-24 md:w-36">
       {/* Vertical Title */}
       <div
-        className={`absolute top-1/2 ${position === 'left' ? 'left-0' : 'right-0'}`}
+        className={`absolute top-1/2 ${
+          position === 'left' ? 'left-0' : 'right-0 left-2 w-6 text-left'
+        }`}
         style={{
           writingMode: 'vertical-lr',
           textOrientation: 'mixed',
           transform: 'translateY(-50%) rotate(180deg)',
         }}
       >
-        <span className="text-white font-semibold text-xs md:text-sm tracking-wider">
+        <span
+          className={`text-white font-semibold text-xs md:text-sm tracking-wider ${
+            position === 'right' ? 'text-left' : ''
+          }`}
+        >
           {sidebarTitle}
         </span>
       </div>

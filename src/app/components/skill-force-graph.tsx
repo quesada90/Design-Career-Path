@@ -88,13 +88,10 @@ export function SkillForceGraph({
   const previousRoleLevelRef = useRef<number>(currentRoleLevel);
 
   // Calculate statistics
-  const unlockedSkills = skills.filter((s) => currentRoleLevel >= s.unlockAtLevel);
   const masteredSkills = skills.filter((s) => skillProficiencies[s.id] === 'master').length;
   const experienceSkills = skills.filter((s) => skillProficiencies[s.id] === 'experience').length;
   const knownSkills = skills.filter((s) => skillProficiencies[s.id] === 'know').length;
   const targetSkillsCount = skills.filter((s) => targetSkillIds.includes(s.id)).length;
-  const totalProgress = masteredSkills + experienceSkills + knownSkills;
-  const progressPercentage = unlockedSkills.length > 0 ? (totalProgress / unlockedSkills.length) * 100 : 0;
 
   // Particle system: create particles around a node
   const emitParticles = useCallback((node: GraphNode, particleColor: string, count: number = 12) => {
@@ -116,21 +113,23 @@ export function SkillForceGraph({
     particlesRef.current = [...particlesRef.current, ...newParticles];
   }, []);
 
-  // Update dimensions on window resize
+  // Update dimensions using ResizeObserver on the actual container element
   useEffect(() => {
-    const updateDimensions = () => {
-      const container = document.getElementById('force-graph-container');
-      if (container) {
+    const container = document.getElementById('force-graph-container');
+    if (!container) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
         setDimensions({
-          width: container.clientWidth,
-          height: Math.max(820, window.innerHeight - 145),
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
         });
       }
-    };
+    });
 
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
+    observer.observe(container);
+    return () => observer.disconnect();
   }, []);
 
   // Detect proficiency changes and emit particles
@@ -189,7 +188,7 @@ export function SkillForceGraph({
           x: p.x + p.vx,
           y: p.y + p.vy,
           life: p.life + 1,
-          vy: p.vy + 0.02, // Gravity
+          vy: p.vy + 0.03, // Gravity
         }))
         .filter((p) => p.life < p.maxLife);
 
@@ -454,65 +453,39 @@ export function SkillForceGraph({
   }, [dimensions]);
 
   return (
-    <div className="w-full pb-20 md:pb-6">
-      {/* Header */}
-      <motion.div
-        className="px-4 md:px-8 py-6 border-b border-slate-800/50"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">{categoryName}</h2>
-          <p className="text-gray-400 text-sm md:text-base mb-4">{categoryDescription}</p>
-
-          {/* Stats */}
-          <div className="flex items-center gap-3 md:gap-6 mb-3 flex-wrap text-xs md:text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400">Unlocked:</span>
-              <span className="font-semibold text-cyan-400">{unlockedSkills.length} / {skills.length}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400">Progress:</span>
-              <span className="font-semibold text-purple-400">{totalProgress} / {unlockedSkills.length}</span>
-            </div>
-            {targetSkillsCount > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400">Targets:</span>
-                <span className="font-semibold text-orange-400">{targetSkillsCount}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2 md:gap-3">
+    <div id="force-graph-container" className="w-full h-full">
+      {/* Graph Container */}
+      <div className="relative h-full">
+        {/* Info Card — top-left */}
+        <div className="absolute top-4 left-4 z-10">
+          <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-lg px-3 py-2">
+            <h2 className="text-sm font-bold text-white mb-0.5">{categoryName}</h2>
+            <p className="text-xs text-gray-400 mb-2 max-w-[200px]">{categoryDescription}</p>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                <span className="text-gray-400">{masteredSkills} Master</span>
+                <span>{masteredSkills} Master</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-purple-500" />
-                <span className="text-gray-400">{experienceSkills} Exp</span>
+                <span>{experienceSkills} Exp</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-gray-400">{knownSkills} Know</span>
+                <span>{knownSkills} Know</span>
               </div>
+              {targetSkillsCount > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-orange-400" />
+                  <span>{targetSkillsCount} Targets</span>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Progress Bar */}
-          <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-cyan-500 to-purple-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPercentage}%` }}
-              transition={{ duration: 0.8 }}
-            />
-          </div>
         </div>
-      </motion.div>
 
-      {/* Graph Container */}
-      <div className="relative" id="force-graph-container">
-        {/* Search Bar */}
-        <div className="absolute top-4 left-4 z-10">
+        {/* Search Bar — top-right */}
+        <div className="absolute top-4 right-4 z-10">
           <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-lg px-3 py-2">
             <Search className="w-4 h-4 text-gray-400" />
             <input
@@ -526,8 +499,8 @@ export function SkillForceGraph({
           </div>
         </div>
 
-        {/* Zoom Controls */}
-        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        {/* Zoom Controls — bottom-right */}
+        <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
           <button
             onClick={handleZoomIn}
             className="w-10 h-10 bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-lg flex items-center justify-center text-white hover:bg-slate-800 transition-colors"
@@ -571,7 +544,7 @@ export function SkillForceGraph({
           enableZoomInteraction={true}
           enablePointerInteraction={true}
           cooldownTime={3000} // Option B: Run until stable
-          d3AlphaDecay={0.02}
+          d3AlphaDecay={0.03}
           d3VelocityDecay={0.3}
         />
 
@@ -602,25 +575,6 @@ export function SkillForceGraph({
             </div>
           </motion.div>
         ))}
-
-        {/* Minimap */}
-        <div className="absolute bottom-4 right-4 z-10">
-            <div className="w-32 h-32 bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                {/* Simplified minimap representation */}
-                {graphData.nodes.map(node => (
-                  <circle
-                    key={node.id}
-                    cx={((node.x || 0) / dimensions.width) * 100}
-                    cy={((node.y || 0) / dimensions.height) * 100}
-                    r="2"
-                    fill={getNodeColor(node)}
-                    opacity="0.6"
-                  />
-                ))}
-              </svg>
-            </div>
-          </div>
 
         {/* Instructions */}
         <div className="absolute bottom-4 left-4 z-10">

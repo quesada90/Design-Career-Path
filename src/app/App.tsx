@@ -923,7 +923,7 @@ export default function App() {
         const activeCategory = skillTreeCategories[activeCategoryIndex];
         if (!activeCategory?.skills) return null;
         return (
-          <div className="relative w-full min-h-[calc(100vh-80px)]">
+          <div className="fixed top-20 left-0 right-0 bottom-0 flex flex-col" style={{ zIndex: 15 }}>
             <SkillTreeNavigation
               categories={skillTreeCategories}
               activeIndex={activeCategoryIndex}
@@ -936,7 +936,7 @@ export default function App() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
-                className="h-full pb-20 md:pb-16"
+                className="flex-1 min-h-0 flex flex-col"
               >
                 <SkillForceGraph
                   skills={activeCategory.skills}

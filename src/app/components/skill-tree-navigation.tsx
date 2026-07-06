@@ -53,7 +53,7 @@ export function SkillTreeNavigation({
       <nav
         role="navigation"
         aria-label="Skill category navigation"
-        className="hidden md:flex sticky top-20 z-20 items-center justify-center gap-1 px-4 py-2 bg-slate-900/80 backdrop-blur-md border-b border-slate-700/50"
+        className="hidden md:flex z-20 items-center justify-center gap-1 px-4 py-2 bg-slate-900/80 backdrop-blur-md border-b border-slate-700/50 flex-shrink-0"
       >
         {categories.map((category, index) => {
             const isActive = activeIndex === index;

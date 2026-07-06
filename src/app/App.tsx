@@ -402,7 +402,7 @@ export default function App() {
     if (!canSetAsTarget(roleId, currentRoleId)) {
       return;
     }
-    
+
     const updatedTargets = [roleId];
     setTargetRoleIds(updatedTargets);
 
@@ -988,11 +988,13 @@ export default function App() {
       {/* Quest Log Tab */}
       {activeTab === 'quest-log' && (
         <QuestLog
-          targets={Object.values(questTargets).sort((a, b) => {
-            if (a.type === 'role' && b.type === 'skill') return -1;
-            if (a.type === 'skill' && b.type === 'role') return 1;
-            return 0;
-          })}
+          targets={Object.values(questTargets)
+            .filter((t) => t.type === 'skill' || targetRoleIds.includes(t.id))
+            .sort((a, b) => {
+              if (a.type === 'role' && b.type === 'skill') return -1;
+              if (a.type === 'skill' && b.type === 'role') return 1;
+              return 0;
+            })}
           onAddTask={handleAddTask}
           onDeleteTask={handleDeleteTask}
           onToggleTask={handleToggleTask}

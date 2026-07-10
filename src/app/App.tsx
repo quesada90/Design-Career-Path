@@ -443,20 +443,14 @@ export default function App() {
     const updatedTargets = targetRoleIds.filter((id) => id !== roleId);
     setTargetRoleIds(updatedTargets);
 
-    const targetQuest = questTargets[roleId];
+    // Remove from state only — keep tasks in DB so they restore if role is re-selected
     setQuestTargets((prev) => {
-      const newTargets = { ...prev };
-      delete newTargets[roleId];
-      return newTargets;
+      const next = { ...prev };
+      delete next[roleId];
+      return next;
     });
 
-    if (targetQuest) {
-      await Promise.all(targetQuest.tasks.map(t => deleteQuestTask(t.id)));
-    }
-
-    await updateProfile({
-      target_role_ids: updatedTargets
-    });
+    await updateProfile({ target_role_ids: updatedTargets });
   };
 
   // Quest Log helpers for creating default items

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Share2, Loader2 } from 'lucide-react';
 import { CATEGORY_COLORS } from './config/tokens';
@@ -92,6 +92,9 @@ export default function App() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [pendingCurrentRole, setPendingCurrentRole] = useState<string | null>(null);
 
+  // Tracks whether the initial DB fetch has completed at least once
+  const initialLoadDoneRef = useRef(false);
+
   // Fetch all collaborative Supabase database states on mount
   useEffect(() => {
     async function loadData() {
@@ -168,6 +171,7 @@ export default function App() {
         console.error('Failed to load data from Supabase:', err);
       } finally {
         setLoading(false);
+        initialLoadDoneRef.current = true;
       }
     }
     loadData();
@@ -618,8 +622,8 @@ export default function App() {
     return result;
   }, []); // careerRoles is a module-level constant — no deps needed
 
-  // Pulse loading overlay if database is synchronizing
-  if (loading && Object.keys(skillProficiencies).length === 0) {
+  // Pulse loading overlay if database is synchronizing on first load
+  if (loading && !initialLoadDoneRef.current) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center space-y-4">
         <motion.div

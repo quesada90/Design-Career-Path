@@ -504,35 +504,36 @@ export default function App() {
 
   // Quest Log handlers
   const handleAddTask = useCallback(async (targetId: string) => {
-    const target = questTargets[targetId];
-    if (!target) return;
-
     const newTask = createNewTask();
-    setQuestTargets((prev) => ({
-      ...prev,
-      [targetId]: {
-        ...target,
-        tasks: [...target.tasks, newTask],
-      },
-    }));
+    let targetType: 'role' | 'skill' | undefined;
 
-    await saveQuestTask(newTask, targetId, target.type);
+    setQuestTargets((prev) => {
+      const target = prev[targetId];
+      if (!target) return prev;
+      targetType = target.type;
+      return {
+        ...prev,
+        [targetId]: { ...target, tasks: [...target.tasks, newTask] },
+      };
+    });
+
+    // Fall back to current snapshot if setter didn't run (target missing)
+    if (!targetType) targetType = questTargets[targetId]?.type;
+    if (targetType) await saveQuestTask(newTask, targetId, targetType);
   }, [questTargets]);
 
   const handleDeleteTask = useCallback(async (targetId: string, taskId: string) => {
-    const target = questTargets[targetId];
-    if (!target) return;
-
-    setQuestTargets((prev) => ({
-      ...prev,
-      [targetId]: {
-        ...target,
-        tasks: target.tasks.filter((t) => t.id !== taskId),
-      },
-    }));
+    setQuestTargets((prev) => {
+      const target = prev[targetId];
+      if (!target) return prev;
+      return {
+        ...prev,
+        [targetId]: { ...target, tasks: target.tasks.filter((t) => t.id !== taskId) },
+      };
+    });
 
     await deleteQuestTask(taskId);
-  }, [questTargets]);
+  }, []);
 
   const handleToggleTask = async (targetId: string, taskId: string) => {
     const target = questTargets[targetId];

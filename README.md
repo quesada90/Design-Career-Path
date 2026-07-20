@@ -25,6 +25,7 @@ Design Career Path gives designers a structured, personalized map of their growt
 |---|---|
 | Framework | [Next.js 16](https://nextjs.org/) (App Router) |
 | UI | React 18, Tailwind CSS 4, shadcn/ui (Radix UI) |
+| AI-augmented | Figma Make, Antigravity, Claude Code |
 | Auth | [Clerk](https://clerk.com/) |
 | Database | [Supabase](https://supabase.com/) (PostgreSQL) |
 | Animations | [Motion (Framer Motion)](https://motion.dev/) |
